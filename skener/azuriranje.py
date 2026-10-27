@@ -36,8 +36,8 @@ def _broj(v):
 def puna_adresa(vrijednost):
     """Dozvoli da se upiše samo `korisnik/repozitorij` umjesto cijele adrese.
 
-    GitHub pod .../releases/latest/download/ uvijek nudi fajlove iz najnovijeg
-    izdanja, pa adresa ne mora da se mijenja pri svakoj novoj verziji.
+    Skraćeni oblik se raširi u raw.githubusercontent.com adresu grane main,
+    koja uvijek daje zadnje objavljeno stanje — adresa se nikad ne mijenja.
     """
     v = (vrijednost or "").strip()
     if not v:
@@ -46,7 +46,7 @@ def puna_adresa(vrijednost):
         return v
     v = v.strip("/")
     if re.fullmatch(r"[\w.-]+/[\w.-]+", v):
-        return f"https://github.com/{v}/releases/latest/download/verzija.json"
+        return f"https://raw.githubusercontent.com/{v}/main/verzija.json"
     return v
 
 

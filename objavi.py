@@ -25,8 +25,9 @@ REPO = "seckestrel/kestrelscan"
 
 KORIJEN = os.path.dirname(os.path.abspath(__file__))
 IZLAZ = os.path.join(KORIJEN, "izdanje")
-PRESKOCI = {"rezultati", "izdanje", "_prethodna", "_uvoz", "__pycache__",
-            ".git", ".gitignore", "postavke.json", "build", "dist"}
+PRESKOCI = {"rezultati", "izdanje", "preuzmi", "_prethodna", "_uvoz",
+            "__pycache__", ".git", ".gitignore", "postavke.json",
+            "build", "dist"}
 
 
 def main():
@@ -55,7 +56,10 @@ def main():
     # --- spakuj ---
     shutil.rmtree(IZLAZ, ignore_errors=True)
     os.makedirs(IZLAZ)
-    zp = os.path.join(IZLAZ, "KestrelScan.zip")
+    # paket ide u preuzmi/ jer se odatle i služi preko raw.githubusercontent.com
+    preuzmi = os.path.join(KORIJEN, "preuzmi")
+    os.makedirs(preuzmi, exist_ok=True)
+    zp = os.path.join(preuzmi, "KestrelScan.zip")
     broj = 0
     with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
         for korijen, folderi, fajlovi in os.walk(KORIJEN):
@@ -74,17 +78,19 @@ def main():
         "verzija": verzija,
         "datum": datetime.date.today().strftime("%d.%m.%Y."),
         "promjene": promjene or ["Sitne izmjene i popravke"],
-        "zip": f"https://github.com/{REPO}/releases/latest/download/KestrelScan.zip",
+        "zip": f"https://raw.githubusercontent.com/{REPO}/main/preuzmi/KestrelScan.zip",
     }
-    with open(os.path.join(IZLAZ, "verzija.json"), "w", encoding="utf-8") as f:
-        json.dump(podaci, f, ensure_ascii=False, indent=2)
+    for gdje in (os.path.join(KORIJEN, "verzija.json"),
+                 os.path.join(IZLAZ, "verzija.json")):
+        with open(gdje, "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
     with open(os.path.join(IZLAZ, "opis.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(f"- {p}" for p in podaci["promjene"]) + "\n")
 
-    print(f"\nSve je u folderu: {IZLAZ}")
-    print(f"\n  gh release create v{verzija} izdanje/KestrelScan.zip "
-          f"izdanje/verzija.json --title \"KestrelScan {verzija}\" "
-          f"--notes-file izdanje/opis.md")
+    print(f"\nverzija.json -> {KORIJEN}")
+    print(f"KestrelScan.zip -> {preuzmi}")
+    print(f"\nObjavi:\n  git add -A && git commit -m \"KestrelScan {verzija}\" "
+          f"&& git push")
     return 0
 
 
