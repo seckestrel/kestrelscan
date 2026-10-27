@@ -91,8 +91,11 @@ UGRADJENO = {
     # preuzeti — ključ u kodu bi otišao s njim. Shodan i HIBP ključ stoje u
     # postavke.json pored alata, a taj fajl nije u paketu i ne dira se pri
     # ažuriranju.
-    "azuriranje_url": "seckestrel/kestrelscan",
-    "azuriranje_automatski": True,
+    # Ažuriranje čeka mjesto za objavu (vlastiti hosting). Dok ga nema,
+    # paket stiže ručno, a provjera se ne pokreće sama — da alat ne kuca na
+    # adresu koje nema.
+    "azuriranje_url": "",
+    "azuriranje_automatski": False,
 }
 
 

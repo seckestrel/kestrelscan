@@ -1,3 +1,0 @@
-- Shodan i HIBP ključ izbačeni iz koda — stoje samo u postavke.json
-- Ugrađeno automatsko ažuriranje preko GitHuba
-- Dodata skripta objavi.py za objavu nove verzije
