@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="bs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KestrelScan — KestrelSec</title>
+<link rel="icon" href="{{ url_for('static', filename='slike/logo.png') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+
+<header class="vrh">
+  <div class="brend">
+    <img class="znak" src="{{ url_for('static', filename='slike/logo_meki.png') }}" alt="KestrelSec">
+    <div class="natpis">
+      <strong>Kestrel<span>Scan</span></strong>
+      <small>KestrelSec · sigurnosni pregled za male firme</small>
+    </div>
+  </div>
+  <button id="btn-postavke" class="tiho">Postavke</button>
+</header>
+
+<div id="pojas-verzija" class="pojas-verzija sakrij"></div>
+
+<main>
+  <!-- ========== LIJEVO ========== -->
+  <section class="panel" id="panel-unos">
+
+    <h2><span class="rb">1</span> Podaci o pregledu</h2>
+
+    <label>Naziv firme
+      <input id="firma" placeholder="Knjigovodstvena agencija Saldo d.o.o.">
+    </label>
+
+    <div class="dva">
+      <label>Pregled izvršio
+        <input id="izvrsio" placeholder="Dragomir Babić, KestrelSec">
+      </label>
+      <label>Kontakt osoba kod klijenta
+        <input id="kontakt_osoba" placeholder="Mirjana Popović, vlasnica">
+      </label>
+    </div>
+
+    <div class="tri">
+      <label>Regija <span class="nag">grad</span>
+        <input id="regija" placeholder="Banja Luka">
+      </label>
+      <label>Lokacija
+        <input id="lokacija" placeholder="Centralna kancelarija">
+      </label>
+      <label>Podlokacija
+        <input id="podlokacija" placeholder="II sprat, računovodstvo">
+      </label>
+    </div>
+
+    <label>Napomena o pregledu <span class="nag">ide u izvještaj ispod podataka o klijentu</span>
+      <textarea id="napomena" rows="2" placeholder="npr. pregled rađen van radnog vremena; dvije mašine ugašene, unesene ručno"></textarea>
+    </label>
+
+    <div class="dva">
+      <label>Domena
+        <input id="domena" placeholder="firma.ba">
+      </label>
+      <label>Sajt <span class="nag">ako je drugačiji</span>
+        <input id="sajt" placeholder="www.firma.ba">
+      </label>
+    </div>
+
+    <label>DKIM selektor <span class="nag">iz reda DKIM-Signature u poslanoj poruci (s=...) — ostavi prazno da alat pogađa</span>
+      <input id="dkim_selektor" placeholder="npr. google, selector1, zoho">
+    </label>
+
+    <label>Mail adrese za provjeru curenja <span class="nag">odvojene zarezom</span>
+      <textarea id="adrese" rows="2" placeholder="info@firma.ba, racunovodstvo@firma.ba"></textarea>
+    </label>
+
+    <div class="dva">
+      <label>Mrežni opseg <span class="nag">više mreža odvoji zarezom</span>
+        <input id="opseg" value="{{ moja_mreza }}"
+               placeholder="192.168.1.0/24, 192.168.10.0/24">
+      </label>
+      <label>AD domen <span class="nag">za PingCastle</span>
+        <input id="domen_ad" placeholder="firma.local">
+      </label>
+    </div>
+
+    <div class="dva">
+      <label>Javna adresa klijenta <span class="nag">za provjeru izloženosti</span>
+        <input id="javna_ip" placeholder="89.xxx.xxx.xxx">
+      </label>
+      <label>Kontakt u izvještaju <span class="nag">ostavi prazno za podrazumijevano</span>
+        <input id="kontakt" placeholder="066/531-666 · dragomir@kestrelsec.io">
+      </label>
+    </div>
+
+    <div class="dva">
+      <label>Administratorski nalog <span class="nag">za inventar mreže</span>
+        <input id="ad_korisnik" placeholder="FIRMA\\administrator">
+      </label>
+      <label>Lozinka <span class="nag">ne snima se nigdje</span>
+        <input id="ad_lozinka" type="password" placeholder="koristi se samo tokom skeniranja">
+      </label>
+    </div>
+
+    <h2><span class="rb">2</span> Područja provjere</h2>
+
+    <div class="grupa-provjera">
+      <div class="zag-grupe">
+        <b>Spolja</b>
+        <span>ne traži pristup mreži klijenta — može se uraditi prije dolaska</span>
+      </div>
+      <label class="ček"><input type="checkbox" value="domena" checked>
+        <span><b>Mail domena</b><em>SPF, DKIM, DMARC, MX — direktni DNS upiti</em></span></label>
+      <label class="ček"><input type="checkbox" value="sajt" checked>
+        <span><b>Sertifikat i TLS</b><em>Istek, verzije protokola, sigurnosna zaglavlja, preusmjeravanje</em></span></label>
+      <label class="ček"><input type="checkbox" value="cms" checked>
+        <span><b>CMS i izloženi fajlovi</b><em>Verzija sistema, .env, .git, arhive i druge putanje koje ne bi smjele biti javne</em></span></label>
+      <label class="ček"><input type="checkbox" value="pasivno" checked>
+        <span><b>Pasivni uvid (Shodan)</b><em>Šta o adresi klijenta već zna javna evidencija interneta — ne dira se njegova mreža, pa se može i prije prvog sastanka
+          {% if not ima_shodan %}<i class="upz">bez ključa radi preko besplatnog InternetDB</i>{% endif %}</em></span></label>
+
+      <label class="ček"><input type="checkbox" value="izlozenost">
+        <span><b>Izloženost sa interneta</b><em>Skenira javnu adresu klijenta — <b>pokreni sa svoje veze</b>, ne iz njegove mreže</em></span></label>
+
+      <label class="ček"><input type="checkbox" value="nalozi" {% if ima_kljuc %}checked{% endif %}>
+        <span><b>Procurjeli nalozi</b><em>Have I Been Pwned
+          {% if not ima_kljuc %}<i class="upz">treba ključ u postavkama</i>{% endif %}</em></span></label>
+    </div>
+
+    <div class="grupa-provjera">
+      <div class="zag-grupe">
+        <b>Na mreži klijenta</b>
+        <span>pokreće se sa lokacije</span>
+      </div>
+      <label class="ček"><input type="checkbox" value="mreza" checked>
+        <span><b>Mreža i otvoreni servisi</b><em>Popis uređaja, portovi, nesigurni protokoli — bez Nmapa</em></span></label>
+      <label class="ček"><input type="checkbox" value="dijeljeno" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Dijeljeni folderi</b><em>Folderi otvoreni za sve, vidljivi bez prijave
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+      <label class="ček"><input type="checkbox" value="inventar" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Inventar uređaja</b><em>Model, procesor, memorija i sistem sa svake mašine — sa procjenom za zamjenu
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+
+      <label class="ček"><input type="checkbox" value="stampaci" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Popis štampača</b><em>Način povezivanja, mrežni štampači, SNMP, dijeljenje — štampač je računar, ne periferija
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+
+      <label class="ček"><input type="checkbox" value="wifi" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Bežična mreža</b><em>Šifrovanje, sačuvani profili, otvorene mreže
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+    </div>
+
+    <div class="grupa-provjera">
+      <div class="zag-grupe">
+        <b>Na mašini klijenta</b>
+        <span>pokreće se sa USB-a, na računaru u domenu</span>
+      </div>
+      <label class="ček"><input type="checkbox" value="windows" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Postavke sistema</b><em>BitLocker, SMB, administratori, firewall, antivirus, zakrpe, prijave
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+      <label class="ček"><input type="checkbox" value="politika" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Politika lozinki</b><em>Minimalna dužina, istek, zaključavanje naloga
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+      <label class="ček"><input type="checkbox" value="licence" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Licence i aktivacija</b><em>Je li Windows i Office aktiviran, kakvim ključem, i ima li licenca rok
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+
+      <label class="ček"><input type="checkbox" value="softver" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Softver i daljinski pristup</b><em>Instalirani programi, TeamViewer i slični alati, lozinke u pregledaču, Office makroi
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+      <label class="ček"><input type="checkbox" value="backup" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Backup softver i zadaci</b><em>Instalirani programi, zakazani zadaci i kad je zadnji put nešto odrađeno
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+
+      <label class="ček"><input type="checkbox" value="win11" {% if je_windows %}checked{% endif %}
+        {% if not je_windows %}disabled{% endif %}>
+        <span><b>Spremnost za Windows 11</b><em>TPM, Secure Boot, procesor — može li se nadograditi ili se mijenja
+          {% if not je_windows %}<i class="upz">radi samo na Windowsu</i>{% endif %}</em></span></label>
+
+      <label class="ček"><input type="checkbox" value="hardver" checked>
+        <span><b>Popis hardvera</b><em>Starost uređaja, SSD ili HDD, zdravlje diska, memorija, verzija sistema</em></span></label>
+      <label class="ček"><input type="checkbox" value="pingcastle" {% if not ima_pingcastle %}disabled{% endif %}>
+        <span><b>Active Directory</b><em>PingCastle ocjena domena
+          {% if not ima_pingcastle %}<i class="upz">stavi PingCastle.exe u folder tools/</i>{% endif %}</em></span></label>
+    </div>
+
+    <h2><span class="rb">3</span> Razgovor sa klijentom
+      <span class="nag">popuni dok skeniranje radi</span></h2>
+    <div class="upute">Ovo su stvari koje nijedan alat ne vidi. Svako „ne" postaje nalaz u izvještaju.</div>
+    <div class="pitanja">
+      {% for oblast, lista in pitanja.items() %}
+      <details class="grupa">
+        <summary>{{ oblast }} <span class="brojač" data-oblast="{{ oblast }}">0/{{ lista|length }}</span></summary>
+        {% for p in lista %}
+        <div class="pitanje" data-id="{{ p.id }}">
+          <div class="tekst">{{ p.pitanje }}</div>
+          <div class="odgovori">
+            <label><input type="radio" name="q_{{ p.id }}" value="da"><span class="da">Da</span></label>
+            <label><input type="radio" name="q_{{ p.id }}" value="ne"><span class="ne">Ne</span></label>
+            <label><input type="radio" name="q_{{ p.id }}" value="nz"><span class="nz">Ne zna se</span></label>
+            <label><input type="radio" name="q_{{ p.id }}" value="np"><span class="np">N/P</span></label>
+          </div>
+          <input class="biljeska" placeholder="bilješka — ide u izvještaj umjesto standardnog teksta">
+        </div>
+        {% endfor %}
+      </details>
+      {% endfor %}
+    </div>
+
+    <div class="saglasnost">
+      <label class="ček"><input type="checkbox" id="saglasan">
+        <span><b>Imam pismenu saglasnost klijenta</b><em>Skeniranje bez saglasnosti je pravni problem, bez obzira na namjeru.</em></span></label>
+    </div>
+
+    <button id="btn-start" class="glavno" disabled>Pokreni pregled</button>
+  </section>
+
+  <!-- ========== DESNO ========== -->
+  <section class="panel" id="panel-rad">
+    <div id="obavijest" class="obavijest sakrij"></div>
+    <div id="prazno" class="prazno">
+      <img class="veliki-znak" src="{{ url_for('static', filename='slike/logo_puni_meki.png') }}" alt="">
+      <p class="krupno">Popuni podatke i pokreni pregled.</p>
+      <p class="nag">Rezultati i PDF izvještaj se snimaju u folder <code>rezultati/</code> pored alata.</p>
+    </div>
+
+    <div id="tok" class="sakrij">
+      <div class="traka-okvir"><div id="traka" class="traka"></div></div>
+      <div class="korak-red"><span id="korak">Pokrećem…</span><span id="posto">0%</span></div>
+      <pre id="dnevnik"></pre>
+    </div>
+
+    <div id="rezultat" class="sakrij">
+      <div id="greske" class="greske sakrij"></div>
+      <div class="ocjena">
+        <div class="bodovi"><span id="bodovi">0</span><small>/32</small></div>
+        <div>
+          <strong id="nivo">—</strong>
+          <small id="nivo-opis"></small>
+        </div>
+      </div>
+      <div class="brojevi">
+        <span class="b visok">Visok <b id="br-visok">0</b></span>
+        <span class="b srednji">Srednji <b id="br-srednji">0</b></span>
+        <span class="b nizak">Nizak <b id="br-nizak">0</b></span>
+        <span class="b dobro">U redu <b id="br-dobro">0</b></span>
+      </div>
+      <div class="dugmad">
+        <a id="btn-pdf" class="glavno" href="#" download>Preuzmi PDF izvještaj</a>
+        <a id="btn-sazetak" class="tiho" href="#" download>Sažetak za klijenta</a>
+        <button id="btn-folder" class="tiho">Otvori folder</button>
+        <button id="btn-novo" class="tiho">Novi pregled</button>
+      </div>
+      <div id="pojas-ponovo" class="pojas sakrij">
+        <span><b>Izvještaj nije u skladu sa nalazima.</b>
+          Unio si ispravke nakon skeniranja — PDF treba napraviti ponovo.</span>
+        <button id="btn-ponovo" class="glavno">Napravi izvještaj ponovo</button>
+      </div>
+
+      <div id="nalazi"></div>
+
+      <h2><span class="rb">4</span> Uređaj koji alat nije očitao
+        <span class="nag">ugašen, pokvaren, van domena, štampač bez drajvera</span></h2>
+      <div class="upute">Uređaj koji postoji a nije skeniran mora ući u popis. Inače
+        izvještaj tvrdi da firma ima deset računara, a ima dvanaest.</div>
+      <div class="uredjaj-forma">
+        <div class="dva">
+          <label>Vrsta
+            <select id="u-vrsta"></select></label>
+          <label>Naziv / oznaka <span class="nag">obavezno</span>
+            <input id="u-naziv" placeholder="RAČ-07 (kancelarija direktora)"></label>
+        </div>
+        <div class="dva">
+          <label>Proizvođač
+            <input id="u-proizvodjac" placeholder="HP"></label>
+          <label>Model
+            <input id="u-model" placeholder="ProDesk 400 G5"></label>
+        </div>
+        <div class="dva">
+          <label>Serijski broj
+            <input id="u-serijski" placeholder="CZC1234ABC"></label>
+          <label>IP adresa <span class="nag">ako je mrežni</span>
+            <input id="u-ip" placeholder="192.168.1.47"></label>
+        </div>
+        <div class="dva">
+          <label>Lokacija uređaja
+            <input id="u-lokacija" placeholder="I sprat, kancelarija 3"></label>
+          <label>Procijenjena starost <span class="nag">godina</span>
+            <input id="u-starost" placeholder="7"></label>
+        </div>
+        <label>Stanje
+          <select id="u-stanje"></select></label>
+        <div class="dva">
+          <label>Procjena rada <span class="nag">sati</span>
+            <input id="u-sati" placeholder="1"></label>
+          <label>Procjena troška <span class="nag">KM</span>
+            <input id="u-trosak" placeholder="60"></label>
+        </div>
+        <label>Napomena
+          <textarea id="u-napomena" rows="2" placeholder="npr. mašina radi ali se gasi pod opterećenjem; vlasnik ne želi zamjenu do nove godine"></textarea></label>
+        <button id="btn-uredjaj" class="glavno">Dodaj uređaj u izvještaj</button>
+      </div>
+
+      <h2><span class="rb">5</span> Zapisi o pregledu
+        <span class="nag">šta je rađeno, kad i ko</span></h2>
+      <div class="upute">Zapisi se dodaju sami i ne mogu se mijenjati. Snimljeni su
+        u <code>zapisi.jsonl</code> u folderu pregleda.</div>
+      <div class="dugmad" style="margin-top:0">
+        <button id="btn-zapisi" class="tiho">Prikaži zapise</button>
+      </div>
+      <div id="zapisi" class="zapisi sakrij"></div>
+    </div>
+  </section>
+  <section class="panel" id="panel-zbirni">
+    <h2><span class="rb">6</span> Zbirni izvještaj
+      <span class="nag">spoji preglede sa više mašina</span></h2>
+    <div class="upute">Pokreni alat na svakoj mašini, pa ovdje izaberi te preglede.
+      Nalaz koji se javlja na više mašina pojaviće se jednom, sa spiskom pogođenih.</div>
+    <div id="pregledi" class="pregledi"></div>
+    <div class="dugmad">
+      <button id="btn-osvjezi" class="tiho">Osvježi spisak</button>
+      <button id="btn-spoji" class="glavno" disabled>Napravi zbirni izvještaj</button>
+    </div>
+
+    <div class="uvoz">
+      <b class="zag-uvoza">Pregled sa druge mašine</b>
+      <p class="upute">U spisku stoje samo pregledi iz foldera <code>rezultati/</code>
+        pored alata. Ako si alat pokretao sa druge mašine, pregled prvo uvezi ovdje —
+        onda se može spojiti.</p>
+
+      <div class="dva">
+        <label>Iz fajla <span class="nag">nalazi.json ili zip pregleda</span>
+          <input type="file" id="uvoz-fajl" accept=".json,.zip"></label>
+        <label>Sa putanje <span class="nag">stick, drugi disk, mrežni folder</span>
+          <input id="uvoz-putanja" placeholder="D:\\rezultati  ili  \\\\server\\pregledi"></label>
+      </div>
+      <div class="dugmad" style="margin-top:4px">
+        <button id="btn-uvoz-fajl" class="tiho">Uvezi izabrani fajl</button>
+        <button id="btn-uvoz-putanja" class="tiho">Uvezi sa putanje</button>
+      </div>
+      <div id="uvoz-poruka" class="uvoz-poruka sakrij"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="dno">
+  <span>KestrelSec · cyber security i IT podrška za male firme</span>
+  <span><span id="dno-verzija"></span> · <a href="#" id="veza-provjeri">provjeri ažuriranje</a></span>
+  <span id="dno-kontakt"></span>
+</footer>
+
+<dialog id="dlg-postavke">
+  <form method="dialog">
+    <h3>Postavke</h3>
+    <label>Potpis na izvještaju
+      <input id="p-izvrsio" placeholder="Dragomir Babić, KestrelSec"></label>
+    <label>Kontakt u podnožju
+      <input id="p-kontakt" placeholder="066/531-666 · dragomir@kestrelsec.io"></label>
+    <label>HIBP ključ <span class="nag">haveibeenpwned.com/API/Key</span>
+      <input id="p-kljuc" type="password" placeholder="ostavi prazno da se ne mijenja"></label>
+    <label>Ažuriranje <span class="nag">korisnik/repozitorij na GitHubu, ili puna adresa do verzija.json</span>
+      <input id="p-azur-url" placeholder="seckestrel/kestrelscan"></label>
+    <label class="ček" style="padding-left:0"><input type="checkbox" id="p-azur-auto">
+      <span><b>Provjeravaj ažuriranje pri pokretanju</b></span></label>
+    <label>Shodan ključ <span class="nag">account.shodan.io — bez njega radi besplatni izvor</span>
+      <input id="p-shodan" type="password" placeholder="ostavi prazno da se ne mijenja"></label>
+    <label>Pauza između HIBP upita <span class="nag">sekundi — servis ograničava broj upita</span>
+      <select id="p-razmak">
+        <option value="6.5">6,5 s — Pwned 1 (10 upita/min)</option>
+        <option value="1.4">1,4 s — Pwned 2 (50 upita/min)</option>
+        <option value="0.8">0,8 s — Pwned 3 (100 upita/min)</option>
+        <option value="0.3">0,3 s — Pwned 4 (500 upita/min)</option>
+      </select></label>
+    <div class="dugmad">
+      <button value="snimi" class="glavno">Snimi</button>
+      <button value="odustani" class="tiho">Odustani</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

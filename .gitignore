@@ -1,0 +1,19 @@
+# Rezultati pregleda — podaci klijenata, nikad na GitHub
+rezultati/
+_prethodna/
+_uvoz/
+
+# Ključevi i lokalna podešavanja
+postavke.json
+
+# PingCastle i drugi alati koji se ne distribuiraju
+tools/*.exe
+tools/*.dll
+tools/*.config
+
+# Python
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec

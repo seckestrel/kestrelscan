@@ -1,0 +1,8 @@
+PingCastle ide ovdje.
+
+1. Preuzmi besplatnu verziju sa https://www.pingcastle.com/download/
+2. Raspakuj i kopiraj PingCastle.exe (i prateće .dll fajlove) u ovaj folder.
+3. U alatu će se tada moći označiti provjera "Active Directory".
+
+PingCastle radi samo na Windows mašini koja je član domena.
+Ne traži instalaciju — zato i radi sa USB-a.

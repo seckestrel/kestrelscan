@@ -1,0 +1,372 @@
+# -*- coding: utf-8 -*-
+"""Popis uređaja na mreži i provjera otvorenih servisa.
+
+Čisti Python — ne traži Nmap ni Npcap drajver, pa radi sa USB-a bez instalacije.
+Koristi TCP connect, isto što radi `nmap -sT`.
+"""
+import concurrent.futures as cf
+import ipaddress
+import re
+import socket
+import subprocess
+import sys
+
+from .nalaz import nalaz, VISOK, SREDNJI, NIZAK, INFO, DOBRO
+from . import mak as m_mak
+
+PORTOVI = {
+    21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS", 80: "HTTP",
+    110: "POP3", 135: "MS RPC", 139: "NetBIOS", 143: "IMAP", 443: "HTTPS",
+    445: "SMB", 465: "SMTPS", 587: "SMTP", 993: "IMAPS", 995: "POP3S",
+    1433: "MS SQL", 1521: "Oracle", 2049: "NFS", 3000: "web app",
+    3306: "MySQL", 3389: "Udaljena radna površina", 5000: "web app",
+    5432: "PostgreSQL", 5900: "VNC", 6379: "Redis", 8000: "web app",
+    8006: "Proxmox", 8080: "web app", 8443: "HTTPS alt", 9100: "Štampanje",
+    27017: "MongoDB", 5985: "WinRM", 5986: "WinRM TLS", 161: "SNMP",
+    554: "RTSP kamera", 1900: "UPnP", 111: "RPC",
+}
+
+# servisi koji ne smiju biti dostupni sa interneta
+OPASNO_SPOLJA = {3389: "Udaljena radna površina", 445: "SMB", 23: "Telnet",
+                 21: "FTP", 3306: "MySQL", 5432: "PostgreSQL", 1433: "MS SQL",
+                 5900: "VNC", 6379: "Redis", 27017: "MongoDB", 135: "MS RPC",
+                 139: "NetBIOS", 5985: "WinRM"}
+
+# servisi koji su problem i unutar mreže
+NESIGURNI = {23: "Telnet šalje lozinku u čistom tekstu",
+             21: "FTP šalje lozinku u čistom tekstu",
+             161: "SNMP često radi sa fabričkom zajednicom 'public'",
+             6379: "Redis je često bez lozinke",
+             27017: "MongoDB je često bez lozinke"}
+
+
+def _ziv(ip, portovi=(445, 80, 443, 22, 135, 3389, 139, 8006, 8080, 8000,
+                      5000, 3000, 21, 23, 9100, 554, 62078), timeout=0.6):
+    for p in portovi:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(timeout)
+                if s.connect_ex((ip, p)) == 0:
+                    return True
+        except OSError:
+            pass
+    return _ping(ip)
+
+
+def _ping(ip, timeout=1):
+    zastava = "-n" if sys.platform.startswith("win") else "-c"
+    cek = "-w" if sys.platform.startswith("win") else "-W"
+    vr = str(timeout * 1000) if sys.platform.startswith("win") else str(timeout)
+    try:
+        r = subprocess.run(["ping", zastava, "1", cek, vr, ip],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=timeout + 2)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def _ime(ip):
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except Exception:
+        return ""
+
+
+def _skeniraj_host(ip, portovi, timeout=0.7):
+    otvoreni = []
+    for p in portovi:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(timeout)
+                if s.connect_ex((ip, p)) == 0:
+                    otvoreni.append(p)
+        except OSError:
+            pass
+    return otvoreni
+
+
+def moja_mreza():
+    """Pogodi lokalni opseg, npr. 192.168.1.0/24."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+        return str(ipaddress.ip_network(ip + "/24", strict=False))
+    except Exception:
+        return "192.168.1.0/24"
+
+
+def razdvoji(tekst):
+    """Jedan ili više opsega, odvojenih zarezom, tačka-zarezom ili razmakom.
+
+    Firma sa kamerama na svom VLAN-u i gostima na trećem nema jednu mrežu nego
+    tri. Vraća (ispravni_opsezi, neispravni_unosi).
+    """
+    dijelovi = [d.strip() for d in re.split(r"[,;\s]+", (tekst or "").strip()) if d.strip()]
+    mreze, lose = [], []
+    for d in dijelovi:
+        try:
+            m = ipaddress.ip_network(d, strict=False)
+        except ValueError:
+            lose.append(d)
+            continue
+        if m not in mreze:
+            mreze.append(m)
+    return mreze, lose
+
+
+def provjeri(opseg, log=lambda s: None, max_hostova=512):
+    nalazi = []
+    mreze, lose = razdvoji(opseg)
+
+    if not mreze:
+        return {"nalazi": [nalaz(
+            "Mreža", "Neispravan mrežni opseg", INFO,
+            f'Uneseno: {opseg}. Nijedan dio nije prepoznat kao mrežni opseg.',
+            preporuka="Upisati u obliku 192.168.1.0/24. Više mreža se odvaja "
+                      "zarezom: 192.168.1.0/24, 192.168.10.0/24")], "sirovo": {}}
+
+    if lose:
+        nalazi.append(nalaz(
+            "Mreža", "Dio unesenih opsega nije prepoznat", INFO,
+            "Preskočeno: " + ", ".join(lose) + ". Skenirano je ostalo: "
+            + ", ".join(str(m) for m in mreze),
+            preporuka="Opseg se piše kao 192.168.1.0/24. Raspon sa crticom "
+                      "(192.168.1.10-50) se ne podržava."))
+
+    # jedinstvene adrese iz svih opsega, redom kako su unesene
+    hostovi, vidjeno = [], set()
+    for m in mreze:
+        for h in (list(m.hosts()) or [m.network_address]):
+            if h not in vidjeno:
+                vidjeno.add(h)
+                hostovi.append(h)
+    ukupno = len(hostovi)
+    hostovi = hostovi[:max_hostova]
+    if ukupno > max_hostova:
+        log(f"Ukupno {ukupno} adresa — skeniram prvih {max_hostova}")
+        nalazi.append(nalaz(
+            "Mreža", "Opseg je veći od granice pregleda", INFO,
+            f"Uneseni opsezi imaju {ukupno} adresa, a pregled ide do "
+            f"{max_hostova}. Skenirano je prvih {max_hostova}.",
+            preporuka="Podijeliti pregled po mrežama i spojiti ih kroz zbirni "
+                      "izvještaj."))
+
+    opis_opsega = ", ".join(str(m) for m in mreze)
+
+    if len(hostovi) <= 8:
+        # Mali opseg — skeniraj sve, bez provjere da li uređaj "odgovara".
+        # Host iza firewalla ume da ćuti na probna pitanja a da ima otvorene portove.
+        zivi = [str(h) for h in hostovi]
+        log(f"Mali opseg ({len(zivi)}) — skeniram sve adrese bez prethodne provjere")
+    else:
+        log(f"Tražim aktivne uređaje u {opis_opsega} ({len(hostovi)} adresa)")
+        zivi = []
+        with cf.ThreadPoolExecutor(max_workers=128) as ex:
+            for ip, ok in zip(hostovi, ex.map(lambda h: _ziv(str(h)), hostovi)):
+                if ok:
+                    zivi.append(str(ip))
+        log(f"Pronađeno {len(zivi)} aktivnih uređaja")
+
+    uredjaji = []
+    portovi = sorted(PORTOVI)
+    with cf.ThreadPoolExecutor(max_workers=48) as ex:
+        bud = {ex.submit(_skeniraj_host, ip, portovi): ip for ip in zivi}
+        for f in cf.as_completed(bud):
+            ip = bud[f]
+            try:
+                otv = f.result()
+            except Exception:
+                otv = []
+            uredjaji.append({
+                "ip": ip, "ime": _ime(ip),
+                "portovi": [{"port": p, "servis": PORTOVI.get(p, "?")} for p in otv],
+            })
+            log(f"  {ip}  {len(otv)} otvorenih")
+
+    # MAC se čita iz ARP tabele — skeniranje je upravo prošlo kroz nju
+    arp = m_mak.tabela()
+    for u in uredjaji:
+        u["mac"] = arp.get(u["ip"], "")
+        u["proizvodjac"], u["vrsta"] = m_mak.proizvodjac(u["mac"])
+
+    uredjaji.sort(key=lambda u: tuple(int(x) for x in u["ip"].split(".")))
+    sirovo = {"opseg": opis_opsega, "opsezi": [str(m) for m in mreze],
+              "broj_uredjaja": len(uredjaji), "uredjaji": uredjaji}
+
+    if not uredjaji:
+        nalazi.append(nalaz(
+            "Mreža", "Nijedan uređaj nije odgovorio", INFO,
+            f"U opsegu {opis_opsega} nijedna adresa nije odgovorila.",
+            preporuka="Provjeriti da li je računar na istoj mreži i da li firewall "
+                      "blokira odlazne pokušaje povezivanja."))
+        return {"nalazi": nalazi, "sirovo": sirovo}
+
+    sa_mac = [u for u in uredjaji if u["mac"]]
+    nalazi.append(nalaz(
+        "Mreža", f"Popisano {len(uredjaji)} aktivnih uređaja", INFO,
+        f"U opsegu {opis_opsega} odgovorilo je {len(uredjaji)} uređaja. "
+        f"Za {len(sa_mac)} je očitana i MAC adresa."
+        + ("" if len(sa_mac) == len(uredjaji) else
+           " MAC se ne vidi za uređaje iza rutera — oni su u drugoj mreži."),
+        preporuka="Uporediti spisak sa onim što zaposleni prepoznaju. Svaki uređaj "
+                  "koji niko ne prepoznaje treba identifikovati. MAC adresa se ne "
+                  "mijenja, pa po njoj uređaj prepoznaješ i na sljedećem pregledu.",
+        tabela={"zaglavlje": ["IP adresa", "Ime", "MAC adresa", "Proizvođač",
+                              "Otvoreni portovi"],
+                "redovi": [[u["ip"], (u["ime"] or "—")[:26], u["mac"] or "—",
+                            m_mak.opis(u["mac"]) if u["mac"] else "—",
+                            ", ".join(str(p["port"]) for p in u["portovi"]) or "—"]
+                           for u in uredjaji],
+                "sirine": [16, 22, 20, 24, 18]},
+        dokaz=[f'{u["ip"]:<16}{u["mac"] or "":<19}{u["ime"] or "(bez imena)":<24}'
+               f'{", ".join(str(p["port"]) for p in u["portovi"]) or "-"}'
+               for u in uredjaji]))
+
+    # uređaj koji se ne može svrstati ni po imenu ni po proizvođaču
+    neprepoznati = [u for u in uredjaji if u["mac"] and not u["proizvodjac"]
+                    and not u["ime"]]
+    if neprepoznati:
+        nalazi.append(nalaz(
+            "Mreža", f"{len(neprepoznati)} uređaja se ne može prepoznati", NIZAK,
+            "Bez imena i bez poznatog proizvođača: "
+            + ", ".join(f'{u["ip"]} ({u["mac"]})' for u in neprepoznati[:10]),
+            "Uređaj na mreži koji se ne zna šta je, ne znači da je napadač — češće "
+            "je privatni telefon, stari laptop ili nešto što je neko donio i "
+            "zaboravio. Ali dok se ne utvrdi šta je, firma ima opremu na mreži o "
+            "kojoj ne zna ništa.",
+            "Proći kroz spisak sa nekim iz firme i identifikovati svaki uređaj. "
+            "Ono što nije njihovo — isključiti sa mreže.",
+            sati=0.5 * len(neprepoznati),
+            dokaz=[f'{u["ip"]} — {u["mac"]} — '
+                   + ("nasumična adresa" if m_mak.je_nasumican(u["mac"])
+                      else "nepoznat proizvođač")
+                   for u in neprepoznati]))
+
+    # nesigurni protokoli
+    for port, zasto in NESIGURNI.items():
+        pogodjeni = [u["ip"] for u in uredjaji if any(p["port"] == port for p in u["portovi"])]
+        if pogodjeni:
+            nalazi.append(nalaz(
+                "Mreža", f"Otvoren {PORTOVI.get(port, port)} na mreži", SREDNJI,
+                f"Port {port} je otvoren na: " + ", ".join(pogodjeni),
+                zasto + ".",
+                f"Isključiti {PORTOVI.get(port, port)} na tim uređajima ili ih "
+                "izdvojiti u zaseban mrežni segment ako se ne mogu isključiti.",
+                sati=1, trosak=60, dokaz=[f"{ip}:{port} otvoren" for ip in pogodjeni]))
+
+    # RDP unutar mreže — informativno, bitno je da li je izložen spolja
+    rdp = [u["ip"] for u in uredjaji if any(p["port"] == 3389 for p in u["portovi"])]
+    if rdp:
+        nalazi.append(nalaz(
+            "Mreža", "Udaljena radna površina je aktivna", NIZAK,
+            "Port 3389 otvoren na: " + ", ".join(rdp),
+            "Unutar mreže je uobičajeno. Problem nastaje ako je isti port "
+            "dostupan i sa interneta — to je najčešći put ulaska ransomwarea.",
+            "Provjeriti na ruteru da port 3389 nije proslijeđen prema internetu. "
+            "Za rad od kuće koristiti VPN.",
+            sati=0.5, dokaz=[f"{ip}:3389" for ip in rdp]))
+
+    # uređaji sa web sučeljem bez HTTPS-a
+    goli_web = [u["ip"] for u in uredjaji
+                if any(p["port"] == 80 for p in u["portovi"])
+                and not any(p["port"] == 443 for p in u["portovi"])]
+    if len(goli_web) >= 2:
+        nalazi.append(nalaz(
+            "Mreža", "Uređaji sa nešifrovanim web sučeljem", NIZAK,
+            "Samo HTTP, bez HTTPS: " + ", ".join(goli_web),
+            "Obično su to štampači, kamere i mrežna oprema. Lozinka za prijavu "
+            "na takav uređaj putuje mrežom u čitljivom obliku.",
+            "Gdje uređaj podržava, uključiti HTTPS. Gdje ne podržava, izdvojiti "
+            "ga u zaseban segment.",
+            sati=1, dokaz=[f"{ip}:80" for ip in goli_web]))
+
+    return {"nalazi": nalazi, "sirovo": sirovo}
+
+
+def javna_izlozenost(log=lambda s: None):
+    """Javna adresa firme + upozorenje da se izloženost mjeri izvana."""
+    nalazi, sirovo = [], {}
+    adresa = None
+    for url in ("https://api.ipify.org", "https://ifconfig.me/ip",
+                "https://icanhazip.com"):
+        try:
+            import requests
+            r = requests.get(url, timeout=6)
+            if r.ok and r.text.strip():
+                adresa = r.text.strip()
+                break
+        except Exception:
+            continue
+    sirovo["javna_ip"] = adresa
+    if adresa:
+        log(f"Javna adresa: {adresa}")
+        nalazi.append(nalaz(
+            "Mreža", "Javna adresa firme", INFO,
+            f"Firma prema internetu izlazi sa adrese {adresa}.",
+            preporuka="Izloženost se mjeri izvan mreže klijenta. Pokreni skeniranje "
+                      "ove adrese sa svoje veze (nmap -Pn --top-ports 1000) i "
+                      "provjeri je li 3389 ili 445 otvoren.",
+            dokaz=[f"javna IP: {adresa}"]))
+    return {"nalazi": nalazi, "sirovo": sirovo}
+
+
+def izlozenost(javna_ip, log=lambda s: None):
+    """Skenira javnu adresu klijenta — pokreće se SA SVOJE veze, ne iz njegove mreže.
+
+    Iz klijentove mreže ruter često sam odgovori na vlastitu javnu adresu, pa
+    rezultat ne znači ništa. Zato ovo ide kao zaseban korak, od kuće.
+    """
+    nalazi, sirovo = [], {"meta": javna_ip}
+    meta = (javna_ip or "").strip()
+    if not meta:
+        return {"nalazi": nalazi, "sirovo": sirovo}
+
+    try:
+        meta = socket.gethostbyname(meta)
+    except OSError:
+        return {"nalazi": [nalaz("Mreža", "Javna adresa nije razriješena", INFO,
+                                 f"Adresa {javna_ip} se ne može razriješiti.")],
+                "sirovo": sirovo}
+
+    log(f"Skeniram javnu adresu {meta}")
+    portovi = sorted(set(PORTOVI) | set(OPASNO_SPOLJA))
+    otvoreni = _skeniraj_host(meta, portovi, timeout=2.0)
+    sirovo["otvoreni"] = [{"port": p, "servis": PORTOVI.get(p, "?")} for p in otvoreni]
+    log(f"Otvoreno spolja: {otvoreni or 'ništa'}")
+
+    opasni = [p for p in otvoreni if p in OPASNO_SPOLJA]
+    ostali = [p for p in otvoreni if p not in OPASNO_SPOLJA]
+
+    if opasni:
+        imena = ", ".join(f"{OPASNO_SPOLJA[p]} (port {p})" for p in opasni)
+        nalazi.append(nalaz(
+            "Mreža", "Opasni servisi su dostupni sa interneta", VISOK,
+            f"Na adresi {meta} otvoreno je: {imena}.",
+            "Ovo nije teorijski rizik. Automatizovane skripte non-stop skeniraju "
+            "internet tražeći upravo ove portove i odmah počinju pogađati lozinke. "
+            "Izložena udaljena radna površina je i dalje najčešći način na koji "
+            "ransomware uđe u malu firmu.",
+            "Zatvoriti portove na ruteru i udaljeni pristup prebaciti na VPN sa "
+            "dvofaktorskom zaštitom. Ako se port mora ostaviti, ograničiti ga na "
+            "poznate adrese.",
+            sati=3, trosak=180,
+            dokaz=[f"{meta}:{p} otvoren — {OPASNO_SPOLJA[p]}" for p in opasni]))
+
+    if ostali:
+        nalazi.append(nalaz(
+            "Mreža", "Servisi dostupni sa interneta", INFO,
+            "Otvoreno: " + ", ".join(f"{p} ({PORTOVI.get(p, '?')})" for p in ostali),
+            preporuka="Provjeriti da je svaki od ovih servisa namjerno otvoren i "
+                      "da je ažuriran.",
+            dokaz=[f"{meta}:{p} — {PORTOVI.get(p, '?')}" for p in ostali]))
+
+    if not otvoreni:
+        nalazi.append(nalaz(
+            "Mreža", "Prema internetu nije otvoren nijedan provjereni port", DOBRO,
+            f"Skenirano {len(portovi)} portova na adresi {meta} — svi su zatvoreni "
+            f"ili filtrirani.",
+            dokaz=[f"skenirano: {len(portovi)} portova"]))
+
+    return {"nalazi": nalazi, "sirovo": sirovo}
