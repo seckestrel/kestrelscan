@@ -90,9 +90,12 @@ $("#btn-start").addEventListener("click", async () => {
   $("#btn-start").textContent = "Pregled u toku…";
   $("#btn-prekini").disabled = false;
   $("#btn-prekini").textContent = "Prekini pregled";
+  $("#red-prekini").classList.remove("sakrij");
   ANKETA = setInterval(osvjezi, 900);
   osvjezi();
   provjeriVerziju(false);   // tiha provjera u trenutku kad se alat stvarno koristi
+  document.body.classList.remove("sirok");
+  naKorak(3);               // razgovor sa klijentom se popunjava dok sken radi
 });
 
 $("#btn-prekini").addEventListener("click", async () => {
@@ -131,6 +134,7 @@ async function osvjezi() {
     clearInterval(ANKETA);
     $("#btn-prekini").disabled = false;
     $("#btn-prekini").textContent = "Prekini pregled";
+    $("#red-prekini").classList.add("sakrij");   // pregled je gotov — nema šta da se prekida
     prikaziRezultat(s);
     if (s.prekinut) {
       obavijesti("Pregled je prekinut prije kraja.",
@@ -504,6 +508,43 @@ $("#btn-uvoz-putanja").addEventListener("click", async () => {
 $("#uvoz-putanja").addEventListener("keydown", e => {
   if (e.key === "Enter") $("#btn-uvoz-putanja").click();
 });
+
+/* ---------- koraci kao kartice ---------- */
+function naKorak(broj) {
+  document.querySelectorAll(".tab").forEach(
+    t => t.classList.toggle("aktivan", t.dataset.korak === String(broj)));
+  document.querySelectorAll(".korak").forEach(
+    k => k.classList.toggle("sakrij", k.dataset.korak !== String(broj)));
+  // Područja provjere su najduži korak. Dok nema skena, desna polovina
+  // ekrana je ionako prazna — neka se raširi preko nje umjesto da se
+  // kvačice slažu u jednu usku kolonu.
+  const mirno = $("#prazno") && !$("#prazno").classList.contains("sakrij");
+  document.body.classList.toggle("sirok", String(broj) === "2" && mirno);
+
+  const p = document.querySelector("#panel-unos");
+  if (p.getBoundingClientRect().top < 0) p.scrollIntoView({block: "start"});
+}
+
+document.querySelectorAll(".tab").forEach(
+  t => t.addEventListener("click", () => naKorak(t.dataset.korak)));
+
+/* Brojevi na karticama: koliko je provjera uključeno i koliko pitanja
+   je odgovoreno — da se ne mora ulaziti u karticu da bi se vidjelo. */
+function osvjeziBrojeve() {
+  const uk = document.querySelectorAll(".grupa-provjera input[type=checkbox]");
+  const cek = [...uk].filter(c => c.checked).length;
+  $("#tab-br-2").textContent = `${cek}/${uk.length}`;
+
+  const pit = document.querySelectorAll(".pitanje");
+  const odg = [...pit].filter(
+    p => p.querySelector("input[type=radio]:checked")).length;
+  $("#tab-br-3").textContent = `${odg}/${pit.length}`;
+}
+
+document.querySelector("#panel-unos").addEventListener("change", e => {
+  if (e.target.type === "checkbox" || e.target.type === "radio") osvjeziBrojeve();
+});
+osvjeziBrojeve();
 
 /* ---------- nova verzija alata ---------- */
 const VERZIJA_MOJA = $("#vrh-verzija").dataset.moja || "";

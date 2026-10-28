@@ -1,9 +1,13 @@
 {
-  "verzija": "1.7.5",
+  "verzija": "1.7.6",
   "datum": "28.10.2026.",
   "promjene": [
-    "Popravljena mrežna provjera — na Windowsu je padala odmah s greškom JE_WINDOWS i nije skenirala mrežu",
-    "Izdanje se više ne može objaviti ako u kodu postoji nedefinisano ime"
+    "Koraci 1-2-3 su sada kartice — vidi se jedan po jedan umjesto svih jedan ispod drugog",
+    "Dugme Pokreni pregled stoji u traci koja se ne skroluje",
+    "Područja provjere se šire preko cijele širine, tri grupe jedna pored druge",
+    "Zbirni izvještaj je sklopljen dok ne zatreba",
+    "Obavijesti se prikazuju na vrhu stranice, ne u desnom panelu",
+    "Dugme Prekini nestaje kad se pregled završi"
   ],
   "zip": "https://raw.githubusercontent.com/seckestrel/kestrelscan/main/preuzmi/KestrelScan.zip"
 }
