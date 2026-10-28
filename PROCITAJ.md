@@ -219,6 +219,30 @@ poslovnice, kada".
 cijeli pregled, a ne za jedan nalaz (*„rađeno van radnog vremena, dvije mašine
 ugašene"*).
 
+### Koliko šta traje
+
+Na kraju pregleda, u dnevniku i u zapisima, stoji utrošeno vrijeme po provjeri:
+
+```
+── Utrošeno vrijeme: 14 min 20 s ──
+     12 min 05 s  Inventar uređaja (84%)
+      1 min 30 s  Dijeljeni folderi (10%)
+           25 s   Mreža i otvoreni servisi (3%)
+```
+
+Orijentir za mrežu `/24` (254 adrese): **20 do 25 sekundi**. Toliko traje jer se
+svaka adresa kuca na 17 portova sa 0,6 s čekanja, u 128 niti odjednom.
+
+Ako pregled traje mnogo duže, vrijeme skoro uvijek odlazi na:
+
+| Provjera | Zašto |
+|---|---|
+| **Inventar uređaja** | CIM sesija preko DCOM-a prema svakoj mašini; nedostupna mašina čeka istek 30–60 s |
+| **Dijeljeni folderi** | SMB popis po svakoj mašini na mreži |
+| **Procurjeli nalozi** | 6,5 s pauze između adresa — to traži sam HIBP |
+| **Active Directory** | PingCastle na pravom domenu ide minutama |
+| **Softver** | `Get-WinEvent` puzi na mašini sa velikim sigurnosnim dnevnikom |
+
 ### Zapisi
 
 Svaki pregled vodi `zapisi.jsonl` u svom folderu — jedan red po događaju, dopisuje

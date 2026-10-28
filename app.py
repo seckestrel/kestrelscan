@@ -12,6 +12,7 @@ import shutil
 import re
 import sys
 import threading
+import time
 import webbrowser
 
 from flask import Flask, jsonify, request, send_from_directory, render_template
@@ -78,7 +79,7 @@ app = Flask(__name__, template_folder=resurs("sabloni"),
 # jedan posao u jednom trenutku — alat radi na terenu, ne na serveru
 POSAO = {"radi": False, "dnevnik": [], "nalazi": [], "sirovo": {},
          "gotovo": False, "folder": None, "pdf": None, "sazetak": None,
-         "greske": [], "treba_izvjestaj": False,
+         "greske": [], "treba_izvjestaj": False, "trajanje": {},
          "korak": "", "napredak": 0, "podaci": {}}
 BRAVA = threading.Lock()
 
@@ -116,6 +117,14 @@ def snimi_postavke(p):
         json.dump(p, f, ensure_ascii=False, indent=2)
 
 
+def trajanje(sekundi):
+    """Vrijeme u obliku koji se čita bez računanja."""
+    s = int(round(sekundi))
+    if s < 60:
+        return f"{s} s"
+    return f"{s // 60} min {s % 60} s" if s % 60 else f"{s // 60} min"
+
+
 def log(poruka):
     vrijeme = datetime.datetime.now().strftime("%H:%M:%S")
     POSAO["dnevnik"].append(f"{vrijeme}  {poruka}")
@@ -147,7 +156,7 @@ def ime_foldera(firma, masina=None, predmetak=""):
 def pokreni(podaci):
     POSAO.update({"radi": True, "dnevnik": [], "nalazi": [], "sirovo": {},
                   "gotovo": False, "pdf": None, "sazetak": None,
-                  "greske": [], "treba_izvjestaj": False,
+                  "greske": [], "treba_izvjestaj": False, "trajanje": {},
                   "napredak": 0, "podaci": podaci})
 
     podaci.setdefault("masina", socket.gethostname())
@@ -185,19 +194,27 @@ def pokreni(podaci):
             return
         POSAO["korak"] = naziv
         log(f"── {naziv} ──")
+        pocelo = time.monotonic()
         try:
             r = funkcija()
             novi = r.get("nalazi") or []
             POSAO["nalazi"] += novi
             POSAO["sirovo"][kljuc] = r.get("sirovo") or {}
+            trajalo = time.monotonic() - pocelo
+            POSAO["trajanje"][naziv] = trajalo
+            log(f"   gotovo za {trajanje(trajalo)} — {len(novi)} nalaza")
             m_zapisi.upisi(folder, "provjera", tehnicar,
-                           {"naziv": naziv, "nalaza": len(novi)}, lok)
+                           {"naziv": naziv, "nalaza": len(novi),
+                            "sekundi": round(trajalo, 1)}, lok)
         except Exception as e:
             poruka = f"{type(e).__name__}: {e}"
-            log(f"   provjera nije uspjela — {poruka}")
+            trajalo = time.monotonic() - pocelo
+            POSAO["trajanje"][naziv] = trajalo
+            log(f"   provjera nije uspjela nakon {trajanje(trajalo)} — {poruka}")
             POSAO["greske"].append(f"{naziv}: {poruka}")
             m_zapisi.upisi(folder, "greska", tehnicar,
-                           {"naziv": naziv, "poruka": poruka}, lok)
+                           {"naziv": naziv, "poruka": poruka,
+                            "sekundi": round(trajalo, 1)}, lok)
             POSAO["nalazi"].append(nalaz(
                 "Napomene", f"Provjera nije uspjela: {naziv}", INFO,
                 f"Tokom provjere došlo je do greške: {poruka}",
@@ -333,9 +350,21 @@ def pokreni(podaci):
             log(f"Sažetak nije napravljen — {poruka}")
             POSAO["greske"].append(f"Sažetak: {poruka}")
 
+        po_duzini = sorted(POSAO["trajanje"].items(), key=lambda x: -x[1])
+        ukupno = sum(POSAO["trajanje"].values())
+        if po_duzini:
+            log(f"── Utrošeno vrijeme: {trajanje(ukupno)} ──")
+            for naziv, sek in po_duzini[:5]:
+                udio = f" ({sek / ukupno * 100:.0f}%)" if ukupno else ""
+                log(f"   {trajanje(sek):>10}  {naziv}{udio}")
+            if len(po_duzini) > 5:
+                log(f"   ostale provjere: "
+                    f"{trajanje(sum(s for _, s in po_duzini[5:]))}")
         m_zapisi.upisi(folder, "kraj", tehnicar, {
             "nalaza": len(POSAO["nalazi"]),
-            "greska": len(POSAO.get("greske") or [])}, lok)
+            "greska": len(POSAO.get("greske") or []),
+            "sekundi": round(ukupno, 1),
+            "najduze": po_duzini[0][0] if po_duzini else ""}, lok)
         log(f"Gotovo. Rezultati su u: {folder}")
     except Exception as e:
         log(f"GREŠKA: {type(e).__name__}: {e}")

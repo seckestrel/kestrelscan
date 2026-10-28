@@ -83,7 +83,10 @@ def sazmi(stavka):
     if v == "komentar":
         return f'{s.get("nalaz", "nalaz")} — "{str(s.get("tekst", ""))[:90]}"'
     if v == "provjera":
-        return f'{s.get("naziv", "")} — {s.get("nalaza", 0)} nalaza'
+        d = f'{s.get("naziv", "")} — {s.get("nalaza", 0)} nalaza'
+        if s.get("sekundi") is not None:
+            d += f', {s["sekundi"]} s'
+        return d
     if v == "greska":
         return f'{s.get("naziv", "")} — {s.get("poruka", "")}'
     if v == "rucni_uredjaj":
@@ -96,6 +99,10 @@ def sazmi(stavka):
         return str(s.get("fajl", ""))
     if v == "kraj":
         d = f'{s.get("nalaza", 0)} nalaza'
+        if s.get("sekundi"):
+            d += f', ukupno {s["sekundi"]} s'
+        if s.get("najduze"):
+            d += f', najduže: {s["najduze"]}'
         if s.get("greska"):
             d += f', {s["greska"]} provjera nije uspjela'
         return d
