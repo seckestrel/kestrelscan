@@ -22,3 +22,6 @@ dist/
 preuzmi/
 verzija.json
 izdanje/
+
+# opis exe fajla se pravi pri svakom build-u
+opis_exe.txt

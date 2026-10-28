@@ -24,7 +24,11 @@ echo.
 !PY! -m pip install --quiet --upgrade pyinstaller
 !PY! -m pip install --quiet -r requirements.txt
 
+!PY! opis_exe.py
+
 !PY! -m PyInstaller --noconfirm --onefile --name KestrelScan ^
+  --icon "statika\slike\logo.ico" ^
+  --version-file "opis_exe.txt" ^
   --add-data "sabloni;sabloni" ^
   --add-data "statika;statika" ^
   --add-data "fontovi;fontovi" ^

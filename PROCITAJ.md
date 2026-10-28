@@ -43,6 +43,15 @@ USB:\
 
 Folder `rezultati\` se pravi sam, pored exe fajla.
 
+Exe nosi KestrelSec ikonu, a u **Svojstvima fajla** stoji ime firme, opis i
+verzija — Windows to pokaže i u upozorenju pri prvom pokretanju.
+
+**Upozorenje „Windows protected your PC" je očekivano.** Javlja se za svaki
+program koji nije potpisan sertifikatom, bez obzira šta radi: *More info →
+Run anyway*. Da upozorenja nema, treba sertifikat za potpisivanje koda
+(oko 200–400 € godišnje) — vrijedi razmisliti kad alat počne da ide kod više
+klijenata, jer pred klijentom to izgleda ozbiljnije.
+
 `POKRENI.bat` i `NAPRAVI_EXE.bat` sami traže Python: prvo preko pokretača `py`,
 pa `python`, pa po uobičajenim putanjama instalacije. Prazna ljuska iz Microsoft
 Store-a se prepoznaje i preskače. Ako ga stvarno nema, ispišu šta da se uradi.
