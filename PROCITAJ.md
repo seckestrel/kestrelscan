@@ -130,6 +130,29 @@ riješeno, šta je novo i šta i dalje stoji.
 
 To je ono što mjesečni izvještaj pretvara iz slike stanja u dokaz da si radio.
 
+### Kad popis mreže nije potpun
+
+Skeniranje vidi samo ono što u tom trenutku odgovara. Uređaj ostaje nevidljiv
+ako je ugašen ili uspavan, ako ima firewall koji odbija sve i ne odgovara na
+ping, ako je na drugom opsegu, ili ako ga bežična izolacija odvaja od žičane
+mreže.
+
+Zato alat uz popis gleda i **ARP tabelu** mašine — spisak svih sa kojima je ta
+mašina nedavno komunicirala. Adresa koja je u ARP tabeli a nije odgovorila na
+skeniranje dobija zaseban nalaz *„Još N uređaja postoji ali nije odgovorilo"*,
+sa MAC adresom i prepoznatim proizvođačem.
+
+Kad se to javi:
+
+1. Traži od klijenta pristup ruteru i pogledaj **spisak dodijeljenih adresa
+   (DHCP lease)** — to je jedini potpun spisak onoga što je na mreži.
+2. Ako su uređaji na drugom opsegu, upiši više opsega odvojenih zarezom:
+   `192.168.1.0/24, 192.168.2.0/24`.
+3. Pokreni mrežni pregled sa druge mašine ili sa bežične mreže, pa spoji
+   preglede zbirnim izvještajem — različite mašine vide različite dijelove.
+4. Ono što ostane nevidljivo unesi ručno, u formi *Uređaj koji alat nije
+   očitao*.
+
 ### Pokreni kao administrator
 
 Na Windowsu desni klik na alat i **Pokreni kao administrator**. Bez toga

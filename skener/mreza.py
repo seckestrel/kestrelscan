@@ -224,6 +224,44 @@ def provjeri(opseg, log=lambda s: None, max_hostova=512):
                f'{", ".join(str(p["port"]) for p in u["portovi"]) or "-"}'
                for u in uredjaji]))
 
+    # --- uređaji koje je sistem vidio, a nisu odgovorili na skeniranje ---
+    # ARP tabela pamti svakog sa kim je mašina skoro komunicirala. Ako je
+    # adresa tu, a skeniranje je nije našlo, uređaj postoji ali ćuti —
+    # najčešće firewall koji odbija sve, uspavana mašina ili uređaj koji se
+    # javio pa se ugasio.
+    nadjene = {u["ip"] for u in uredjaji}
+    u_opsegu = []
+    for ip, mac in arp.items():
+        if ip in nadjene:
+            continue
+        try:
+            a = ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        if any(a in m for m in mreze):
+            u_opsegu.append((ip, mac))
+
+    if u_opsegu:
+        u_opsegu.sort(key=lambda x: tuple(int(y) for y in x[0].split(".")))
+        sirovo["cute"] = [{"ip": i, "mac": m} for i, m in u_opsegu]
+        nalazi.append(nalaz(
+            "Mreža", f"Još {len(u_opsegu)} uređaja postoji ali nije odgovorilo",
+            INFO,
+            "Ove adrese stoje u ARP tabeli ove mašine — znači neko je na njima "
+            "nedavno bio — ali na skeniranje nisu odgovorile: "
+            + ", ".join(f"{i} ({m_mak.opis(m)})" for i, m in u_opsegu[:8])
+            + (" …" if len(u_opsegu) > 8 else ""),
+            "Uređaj koji ne odgovara nije nužno problem — češće je ugašen ili "
+            "ima firewall koji odbija sve. Ali to znači da popis mreže nije "
+            "potpun, pa ni izvještaj ne pokriva sve što firma ima.",
+            "Provjeriti spisak dodijeljenih adresa na ruteru i uporediti ga sa "
+            "ovim popisom. Uređaje koji nedostaju unijeti ručno ili ponoviti "
+            "pregled kad budu uključeni.",
+            tabela={"zaglavlje": ["IP adresa", "MAC adresa", "Proizvođač"],
+                    "redovi": [[i, m, m_mak.opis(m)] for i, m in u_opsegu],
+                    "sirine": [22, 26, 52]},
+            dokaz=[f"{i}  {m}  {m_mak.opis(m)}" for i, m in u_opsegu]))
+
     # uređaj koji se ne može svrstati ni po imenu ni po proizvođaču
     neprepoznati = [u for u in uredjaji if u["mac"] and not u["proizvodjac"]
                     and not u["ime"]]
