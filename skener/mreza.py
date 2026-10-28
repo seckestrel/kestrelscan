@@ -14,6 +14,8 @@ import sys
 from .nalaz import nalaz, VISOK, SREDNJI, NIZAK, INFO, DOBRO
 from . import mak as m_mak
 
+JE_WINDOWS = sys.platform.startswith("win")
+
 PORTOVI = {
     21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS", 80: "HTTP",
     110: "POP3", 135: "MS RPC", 139: "NetBIOS", 143: "IMAP", 443: "HTTPS",

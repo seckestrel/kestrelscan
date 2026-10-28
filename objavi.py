@@ -30,6 +30,42 @@ PRESKOCI = {"rezultati", "izdanje", "preuzmi", "_prethodna", "_uvoz",
             "build", "dist"}
 
 
+def provjeri_kod():
+    """Uhvati nedefinisana imena prije nego izdanje ode na teren.
+
+    Grana koja radi samo na Windowsu se ovdje nikad ne izvrši, pa greška
+    tipa `JE_WINDOWS is not defined` prođe sve testove i pukne tek kod
+    klijenta. Pyflakes čita kod, ne izvršava ga, pa vidi i te grane.
+    """
+    try:
+        from pyflakes.api import checkPath
+        from pyflakes.reporter import Reporter
+    except ImportError:
+        print("!! pyflakes nije instaliran — preskačem provjeru koda.")
+        print("   pip install pyflakes")
+        return True
+
+    import io
+    greske, izlaz = [], io.StringIO()
+    rep = Reporter(izlaz, izlaz)
+    fajlovi = [os.path.join(KORIJEN, "app.py")]
+    skener_dir = os.path.join(KORIJEN, "skener")
+    fajlovi += [os.path.join(skener_dir, f) for f in sorted(os.listdir(skener_dir))
+                if f.endswith(".py")]
+    for f in fajlovi:
+        checkPath(f, rep)
+    for red in izlaz.getvalue().splitlines():
+        if "undefined name" in red or "undefined local" in red:
+            greske.append(red)
+    if greske:
+        print("ZAUSTAVLJENO — nedefinisana imena u kodu:")
+        for g in greske:
+            print("  " + g)
+        return False
+    print("Provjera koda: uredu.")
+    return True
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -38,6 +74,9 @@ def main():
     promjene = [a.strip() for a in sys.argv[2:] if a.strip()]
     if not re.fullmatch(r"\d+(\.\d+){1,3}", verzija):
         print(f"Verzija mora biti oblika 1.6.0, dobijeno: {verzija}")
+        return 1
+
+    if not provjeri_kod():
         return 1
 
     # --- upiši novu verziju u app.py ---

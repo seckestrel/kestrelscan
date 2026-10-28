@@ -1,10 +1,9 @@
 {
-  "verzija": "1.7.4",
+  "verzija": "1.7.5",
   "datum": "28.10.2026.",
   "promjene": [
-    "Obavijest o novoj verziji stoji na vrhu stranice i ne nestaje kad skrolaš",
-    "Provjera verzije se pokreće sama i u trenutku kad kreneš pregled",
-    "Dugme Provjeri ažuriranje preseljeno u zaglavlje, uz prikaz trenutne verzije"
+    "Popravljena mrežna provjera — na Windowsu je padala odmah s greškom JE_WINDOWS i nije skenirala mrežu",
+    "Izdanje se više ne može objaviti ako u kodu postoji nedefinisano ime"
   ],
   "zip": "https://raw.githubusercontent.com/seckestrel/kestrelscan/main/preuzmi/KestrelScan.zip"
 }
