@@ -97,6 +97,69 @@ def moja_mreza():
         return "192.168.1.0/24"
 
 
+
+# imena po kojima se prepoznaje tunel ili VPN adapter
+VPN_TRAGOVI = ("vpn", "tap-", "tap0", "openvpn", "wireguard", "wg0",
+               "fortinet", "forticlient", "anyconnect", "cisco",
+               "globalprotect", "pulse", "juniper", "sonicwall", "checkpoint",
+               "zerotier", "tailscale", "softether", "ppp", "l2tp", "pptp",
+               "sstp", "ikev2", "nordlynx", "proton", "mullvad", "tunnel",
+               "teredo", "hamachi", "radmin vpn")
+
+
+def _lokalne_mreze():
+    """Mreže na koje je ova mašina direktno priključena — sve van toga ide
+    preko rutera ili tunela."""
+    out = []
+    if JE_WINDOWS:
+        try:
+            r = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive",
+                 "-ExecutionPolicy", "Bypass", "-Command",
+                 "Get-NetIPAddress -AddressFamily IPv4 | Select-Object "
+                 "IPAddress,PrefixLength,InterfaceAlias | ConvertTo-Json -Compress"],
+                capture_output=True, text=True, timeout=25,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            import json as _j
+            d = _j.loads((r.stdout or "").strip() or "[]")
+            for a in (d if isinstance(d, list) else [d]):
+                ip, duz = a.get("IPAddress"), a.get("PrefixLength")
+                if not ip or duz in (None, ""):
+                    continue
+                try:
+                    out.append((ipaddress.ip_network(f"{ip}/{duz}", strict=False),
+                                a.get("InterfaceAlias") or ""))
+                except ValueError:
+                    pass
+        except Exception:
+            pass
+    else:
+        try:
+            r = subprocess.run(["ip", "-4", "-o", "addr"], capture_output=True,
+                               text=True, timeout=15)
+            for red in (r.stdout or "").splitlines():
+                d = red.split()
+                if len(d) >= 4 and "/" in d[3]:
+                    try:
+                        out.append((ipaddress.ip_network(d[3], strict=False), d[1]))
+                    except ValueError:
+                        pass
+        except Exception:
+            pass
+    return [(m, i) for m, i in out if not m.is_loopback]
+
+
+def _vpn_veze(lokalne):
+    """Adapteri čije ime odaje tunel. Ne mjeri se saobraćaj — samo se gleda
+    šta na mašini postoji."""
+    nadjeni = []
+    for mreza_, ime in lokalne:
+        n = (ime or "").lower()
+        if any(tr in n for tr in VPN_TRAGOVI):
+            nadjeni.append({"adapter": ime, "mreza": str(mreza_)})
+    return nadjeni
+
+
 def razdvoji(tekst):
     """Jedan ili više opsega, odvojenih zarezom, tačka-zarezom ili razmakom.
 
@@ -134,6 +197,46 @@ def provjeri(opseg, log=lambda s: None, max_hostova=512):
             + ", ".join(str(m) for m in mreze),
             preporuka="Opseg se piše kao 192.168.1.0/24. Raspon sa crticom "
                       "(192.168.1.10-50) se ne podržava."))
+
+    # --- je li traženi opseg uopšte na ovoj mašini ---
+    lokalne = _lokalne_mreze()
+    dodatno = {"lokalne_mreze": [str(m) for m, _ in lokalne]}
+    vpn = _vpn_veze(lokalne)
+    if vpn:
+        dodatno["vpn"] = vpn
+        log("Pažnja: na mašini postoji VPN/tunel adapter — "
+            + ", ".join(v["adapter"] for v in vpn))
+        nalazi.append(nalaz(
+            "Mreža", "Mašina ima VPN ili tunel prema drugoj mreži", INFO,
+            "Prepoznati adapteri: "
+            + ", ".join(f'{v["adapter"]} ({v["mreza"]})' for v in vpn) + ".",
+            "Preko tunela se dolazi do mreže koja nije klijentova — centralni "
+            "sistem, laboratorija, matična ustanova, dobavljač. Saglasnost "
+            "klijenta ne pokriva tu mrežu, a skeniranje preko tunela je "
+            "skeniranje tuđeg sistema.",
+            "Ne skenirati opsege koji se dobijaju preko tunela. U razgovoru "
+            "utvrditi čemu VPN služi, ko sve može da se spoji, ima li "
+            "dvofaktorsku prijavu i da li dobavljač ima stalan pristup.",
+            dokaz=[f'{v["adapter"]} — {v["mreza"]}' for v in vpn]))
+
+    van_masine = [m for m in mreze
+                  if not any(m.subnet_of(l) or l.subnet_of(m) or m == l
+                             for l, _ in lokalne)]
+    if lokalne and van_masine:
+        log("Pažnja: traženi opseg nije na ovoj mašini — "
+            + ", ".join(str(m) for m in van_masine))
+        nalazi.append(nalaz(
+            "Mreža", "Traženi opseg nije mreža ove mašine", INFO,
+            "Skenira se: " + ", ".join(str(m) for m in van_masine)
+            + ". Mašina je priključena na: "
+            + ", ".join(str(m) for m, _ in lokalne) + ".",
+            "Opseg do kojeg se dolazi preko rutera ili tunela može pripadati "
+            "drugoj organizaciji. Saglasnost se odnosi samo na mrežu klijenta.",
+            "Provjeriti da li uneseni opseg zaista pripada klijentu. Ako se do "
+            "njega dolazi preko VPN-a, ne skenirati ga bez posebne pismene "
+            "saglasnosti vlasnika te mreže.",
+            dokaz=[f"traženo: {m}" for m in van_masine]
+                  + [f"na mašini: {m} ({i})" for m, i in lokalne]))
 
     # jedinstvene adrese iz svih opsega, redom kako su unesene
     hostovi, vidjeno = [], set()
@@ -194,6 +297,7 @@ def provjeri(opseg, log=lambda s: None, max_hostova=512):
     uredjaji.sort(key=lambda u: tuple(int(x) for x in u["ip"].split(".")))
     sirovo = {"opseg": opis_opsega, "opsezi": [str(m) for m in mreze],
               "broj_uredjaja": len(uredjaji), "uredjaji": uredjaji}
+    sirovo.update(dodatno)
 
     if not uredjaji:
         nalazi.append(nalaz(

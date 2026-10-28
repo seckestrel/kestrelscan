@@ -130,6 +130,33 @@ riješeno, šta je novo i šta i dalje stoji.
 
 To je ono što mjesečni izvještaj pretvara iz slike stanja u dokaz da si radio.
 
+### VPN i tuđe mreže — granica koju ne prelaziš
+
+Firma često ima VPN prema nečijem centralnom sistemu: zdravstvenom
+informacionom sistemu, laboratoriji, matičnoj ustanovi, dobavljaču programa.
+Sa mašine klijenta se preko tunela dolazi do **mreže koja nije njegova**.
+
+Saglasnost koju ti je dao klijent pokriva **samo njegovu mrežu**. Skeniranje
+preko tunela je skeniranje tuđeg sistema, bez saglasnosti vlasnika — i na
+drugoj strani to vidi njihov nadzor.
+
+Alat zato radi dvije provjere prije skeniranja:
+
+- prepozna **VPN i tunel adaptere** na mašini (FortiClient, AnyConnect,
+  OpenVPN, WireGuard, GlobalProtect, Pulse, ZeroTier, Tailscale, PPP…) i upiše
+  nalaz da tunel postoji;
+- uporedi **traženi opseg sa mrežama na koje je mašina priključena**. Ako opseg
+  nije ni jedna od njih, javi *„Traženi opseg nije mreža ove mašine"* — znak da
+  se do njega dolazi preko rutera ili tunela.
+
+Oba nalaza su informativna, alat te ne zaustavlja. Odluka je tvoja, ali ako je
+druga strana tuđa — ne skeniraj.
+
+**Šta umjesto toga ide u izvještaj:** postojanje VPN-a, čemu služi, ko sve može
+da se spoji, ima li dvofaktorsku prijavu, i da li dobavljač ima stalan pristup.
+To su nalazi koji se dobijaju razgovorom, a vrijede više od skeniranja tuđe
+mreže.
+
 ### Kad popis mreže nije potpun
 
 Skeniranje vidi samo ono što u tom trenutku odgovara. Uređaj ostaje nevidljiv
