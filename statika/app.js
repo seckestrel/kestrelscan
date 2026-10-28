@@ -92,6 +92,7 @@ $("#btn-start").addEventListener("click", async () => {
   $("#btn-prekini").textContent = "Prekini pregled";
   ANKETA = setInterval(osvjezi, 900);
   osvjezi();
+  provjeriVerziju(false);   // tiha provjera u trenutku kad se alat stvarno koristi
 });
 
 $("#btn-prekini").addEventListener("click", async () => {
@@ -505,6 +506,24 @@ $("#uvoz-putanja").addEventListener("keydown", e => {
 });
 
 /* ---------- nova verzija alata ---------- */
+const VERZIJA_MOJA = $("#vrh-verzija").dataset.moja || "";
+
+/* Traka o novoj verziji visi tačno ispod zaglavlja, pa je vidljiva
+   bez obzira na to dokle je stranica skrolovana. */
+function mjeriZaglavlje() {
+  const v = document.querySelector(".vrh");
+  if (v) document.documentElement.style.setProperty(
+    "--vrh-h", v.offsetHeight + "px");
+}
+mjeriZaglavlje();
+addEventListener("resize", mjeriZaglavlje);
+
+function vrhNapomena(tekst) {
+  const e = $("#vrh-verzija");
+  e.textContent = `KestrelScan ${VERZIJA_MOJA} · ${tekst}`;
+  e.classList.add("vrh-slabo");
+}
+
 async function provjeriVerziju(rucno) {
   let v;
   try {
@@ -514,7 +533,15 @@ async function provjeriVerziju(rucno) {
       obavijesti("Provjera ažuriranja nije uspjela.",
         `<small>Alat ne može da dođe do svog servera: ${esc(String(e))}</small>`,
         true);
+    } else {
+      vrhNapomena("provjera nije uspjela");
     }
+    return;
+  }
+
+  if (!rucno && v.greska) {
+    vrhNapomena(/[Nn]ije podešena/.test(v.greska)
+      ? "ažuriranje nije podešeno" : "provjera nije uspjela");
     return;
   }
 
@@ -533,7 +560,11 @@ async function provjeriVerziju(rucno) {
     return;
   }
 
-  $("#dno-verzija").textContent = "KestrelScan " + (v.moja || "");
+  const oznaka = "KestrelScan " + (v.moja || "");
+  $("#dno-verzija").textContent = oznaka;
+  const vrh = $("#vrh-verzija");
+  vrh.classList.remove("vrh-slabo");
+  vrh.textContent = v.ima_novu ? `${v.moja} → ${v.verzija}` : oznaka;
   const el = $("#pojas-verzija");
 
   if (!v.ima_novu) {
@@ -580,8 +611,15 @@ async function provjeriVerziju(rucno) {
   };
 }
 
-$("#veza-provjeri").addEventListener("click", e => {
-  e.preventDefault();
-  provjeriVerziju(true);
-});
+function rucnaProvjera(e) {
+  if (e) e.preventDefault();
+  const b = $("#btn-azur");
+  b.disabled = true; b.textContent = "Provjeravam…";
+  provjeriVerziju(true).finally(() => {
+    b.disabled = false; b.textContent = "Provjeri ažuriranje";
+  });
+}
+
+$("#btn-azur").addEventListener("click", rucnaProvjera);
+$("#veza-provjeri").addEventListener("click", rucnaProvjera);
 provjeriVerziju(false);

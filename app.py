@@ -47,7 +47,7 @@ from skener.nalaz import (nalaz, ocjena, sortiraj,
                           VISOK, SREDNJI, NIZAK, INFO, DOBRO)
 
 PORT = 8777
-VERZIJA = "1.7.3"
+VERZIJA = "1.7.4"
 
 
 def korijen():
@@ -410,6 +410,7 @@ def pokreni(podaci):
 @app.route("/")
 def pocetna():
     return render_template("index.html",
+                           verzija=VERZIJA,
                            moja_mreza=m_mreza.moja_mreza(),
                            ima_kljuc=bool(ucitaj_postavke().get("hibp_kljuc")),
                            ima_shodan=bool(ucitaj_postavke().get("shodan_kljuc")),

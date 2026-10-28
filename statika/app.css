@@ -399,3 +399,15 @@ select{
   border-top:none; color:#f0e4c2;
 }
 .pojas-admin b{color:var(--srednji)}
+
+/* ---- alatke u zaglavlju ---- */
+.alatke{display:flex; align-items:center; gap:10px}
+.vrh-verzija{font-size:11.5px; color:#5c7086; letter-spacing:.2px}
+.alatke .tiho{padding:7px 12px; font-size:13px}
+@media (max-width:620px){
+  .vrh-verzija{display:none}
+  .alatke .tiho{padding:7px 10px; font-size:12px}
+}
+.vrh-slabo{color:#4a5a6e}
+/* traka o novoj verziji ostaje na vidiku i kad se stranica skrola */
+.pojas-verzija{position:sticky; top:var(--vrh-h, 79px); z-index:9}

@@ -17,7 +17,11 @@
       <small>KestrelSec · sigurnosni pregled za male firme</small>
     </div>
   </div>
-  <button id="btn-postavke" class="tiho">Postavke</button>
+  <div class="alatke">
+    <span id="vrh-verzija" class="vrh-verzija" data-moja="{{ verzija }}">KestrelScan {{ verzija }}</span>
+    <button id="btn-azur" class="tiho">Provjeri ažuriranje</button>
+    <button id="btn-postavke" class="tiho">Postavke</button>
+  </div>
 </header>
 
 <div id="pojas-verzija" class="pojas-verzija sakrij"></div>
@@ -369,7 +373,7 @@
 
 <footer class="dno">
   <span>KestrelSec · cyber security i IT podrška za male firme</span>
-  <span><span id="dno-verzija"></span> · <a href="#" id="veza-provjeri">provjeri ažuriranje</a></span>
+  <span><span id="dno-verzija">KestrelScan {{ verzija }}</span> · <a href="#" id="veza-provjeri">provjeri ažuriranje</a></span>
   <span id="dno-kontakt"></span>
 </footer>
 

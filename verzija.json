@@ -1,8 +1,10 @@
 {
-  "verzija": "1.7.3",
+  "verzija": "1.7.4",
   "datum": "28.10.2026.",
   "promjene": [
-    "Jasnije polje za adresu ažuriranja — sivi primjer se više ne može zamijeniti sa upisanom vrijednošću"
+    "Obavijest o novoj verziji stoji na vrhu stranice i ne nestaje kad skrolaš",
+    "Provjera verzije se pokreće sama i u trenutku kad kreneš pregled",
+    "Dugme Provjeri ažuriranje preseljeno u zaglavlje, uz prikaz trenutne verzije"
   ],
   "zip": "https://raw.githubusercontent.com/seckestrel/kestrelscan/main/preuzmi/KestrelScan.zip"
 }
