@@ -88,8 +88,27 @@ $("#btn-start").addEventListener("click", async () => {
   $("#tok").classList.remove("sakrij");
   $("#btn-start").disabled = true;
   $("#btn-start").textContent = "Pregled u toku…";
+  $("#btn-prekini").disabled = false;
+  $("#btn-prekini").textContent = "Prekini pregled";
   ANKETA = setInterval(osvjezi, 900);
   osvjezi();
+});
+
+$("#btn-prekini").addEventListener("click", async () => {
+  const b = $("#btn-prekini");
+  b.disabled = true;
+  b.textContent = "Prekidam — čekam tekuću provjeru…";
+  try {
+    const o = await (await fetch("/api/prekini", {method: "POST"})).json();
+    if (!o.ok) {
+      obavijesti("Prekid nije moguć.", `<small>${esc(o.greska || "")}</small>`, true);
+      b.disabled = false;
+      b.textContent = "Prekini pregled";
+    }
+  } catch (e) {
+    b.disabled = false;
+    b.textContent = "Prekini pregled";
+  }
 });
 
 /* ---------- osvježavanje stanja ---------- */
@@ -104,9 +123,19 @@ async function osvjezi() {
   d.textContent = s.dnevnik.join("\n");
   if (dole) d.scrollTop = d.scrollHeight;
 
+  $("#btn-prekini").textContent = s.prekid
+    ? "Prekidam — čekam tekuću provjeru…" : "Prekini pregled";
+
   if (s.gotovo) {
     clearInterval(ANKETA);
+    $("#btn-prekini").disabled = false;
+    $("#btn-prekini").textContent = "Prekini pregled";
     prikaziRezultat(s);
+    if (s.prekinut) {
+      obavijesti("Pregled je prekinut prije kraja.",
+        "<small>Izvještaj je napravljen od onoga što je urađeno. "
+        + "Nalaz o prekidu stoji u napomenama.</small>", true);
+    }
     $("#btn-start").disabled = false;
     $("#btn-start").textContent = "Pokreni pregled";
   }
@@ -478,7 +507,21 @@ async function provjeriVerziju(rucno) {
   let v;
   try {
     v = await (await fetch("/api/verzija" + (rucno ? "?sam=1" : ""))).json();
-  } catch (e) { return; }
+  } catch (e) {
+    if (rucno) {
+      obavijesti("Provjera ažuriranja nije uspjela.",
+        `<small>Alat ne može da dođe do svog servera: ${esc(String(e))}</small>`,
+        true);
+    }
+    return;
+  }
+
+  if (rucno && !v.moja) {
+    obavijesti("Provjera ažuriranja nije uspjela.",
+      "<small>Odgovor nije prepoznat. Vjerovatno je u pitanju starija "
+      + "verzija alata koja nema ugrađeno ažuriranje.</small>", true);
+    return;
+  }
 
   $("#dno-verzija").textContent = "KestrelScan " + (v.moja || "");
   const el = $("#pojas-verzija");

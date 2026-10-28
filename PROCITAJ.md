@@ -360,6 +360,17 @@ poslovnice, kada".
 cijeli pregled, a ne za jedan nalaz (*„rađeno van radnog vremena, dvije mašine
 ugašene"*).
 
+### Prekid pregleda
+
+Dok pregled traje, ispod trake napretka stoji **Prekini pregled**. Provjera koja
+je u tom trenutku u toku se dovrši, ostale se preskaču, i izvještaj se pravi od
+onoga što je do tada urađeno — uz nalaz *„Pregled je prekinut prije kraja"* u
+napomenama, da se poslije zna da obim nije pun.
+
+Mrežni dio prekid osjeti odmah, jer se provjerava unutar samog skeniranja.
+Provjere koje su jedna PowerShell naredba (inventar, softver) moraju se
+dovršiti — tu prekid djeluje tek kad ta naredba završi.
+
 ### Koliko šta traje
 
 Na kraju pregleda, u dnevniku i u zapisima, stoji utrošeno vrijeme po provjeri:

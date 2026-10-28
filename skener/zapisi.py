@@ -14,6 +14,7 @@ import socket
 IME = "zapisi.jsonl"
 
 OPIS = {
+    "prekid": "Pregled prekinut na zahtjev",
     "pocetak": "Pokrenut pregled",
     "provjera": "Izvršena provjera",
     "greska": "Provjera nije uspjela",

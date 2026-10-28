@@ -1,8 +1,9 @@
 {
-  "verzija": "1.7.1",
+  "verzija": "1.7.2",
   "datum": "28.10.2026.",
   "promjene": [
-    "Popravljena greška kod DKIM provjere (TypeError na MX zapisima)"
+    "Dugme Prekini pregled — zaustavlja skeniranje i pravi izvještaj od urađenog",
+    "Provjera ažuriranja sad javi grešku umjesto da ćuti"
   ],
   "zip": "https://raw.githubusercontent.com/seckestrel/kestrelscan/main/preuzmi/KestrelScan.zip"
 }

@@ -179,7 +179,8 @@ def razdvoji(tekst):
     return mreze, lose
 
 
-def provjeri(opseg, log=lambda s: None, max_hostova=512, preskoci=None):
+def provjeri(opseg, log=lambda s: None, max_hostova=512, preskoci=None,
+             stani=lambda: False):
     nalazi = []
     mreze, lose = razdvoji(opseg)
     izuzete, lose_izuzete = razdvoji(preskoci or "")
@@ -287,15 +288,27 @@ def provjeri(opseg, log=lambda s: None, max_hostova=512, preskoci=None):
         log(f"Tražim aktivne uređaje u {opis_opsega} ({len(hostovi)} adresa)")
         zivi = []
         with cf.ThreadPoolExecutor(max_workers=128) as ex:
-            for ip, ok in zip(hostovi, ex.map(lambda h: _ziv(str(h)), hostovi)):
+            # prekid se provjerava u samoj niti — tako skeniranje stane odmah,
+            # a ne tek kad prođe svih 254 adrese
+            for ip, ok in zip(hostovi,
+                              ex.map(lambda h: False if stani() else _ziv(str(h)),
+                                     hostovi)):
                 if ok:
                     zivi.append(str(ip))
+        if stani():
+            log("Prekinuto tokom traženja uređaja")
+            return {"nalazi": nalazi + [nalaz(
+                "Mreža", "Popis mreže je prekinut", INFO,
+                "Traženje uređaja je zaustavljeno na zahtjev prije kraja.",
+                preporuka="Ponoviti pregled mreže u punom obimu.")],
+                "sirovo": dict(dodatno, opseg=opis_opsega)}
         log(f"Pronađeno {len(zivi)} aktivnih uređaja")
 
     uredjaji = []
     portovi = sorted(PORTOVI)
     with cf.ThreadPoolExecutor(max_workers=48) as ex:
-        bud = {ex.submit(_skeniraj_host, ip, portovi): ip for ip in zivi}
+        bud = {ex.submit(lambda i: [] if stani() else _skeniraj_host(i, portovi),
+                         ip): ip for ip in zivi}
         for f in cf.as_completed(bud):
             ip = bud[f]
             try:

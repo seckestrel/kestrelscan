@@ -47,7 +47,7 @@ from skener.nalaz import (nalaz, ocjena, sortiraj,
                           VISOK, SREDNJI, NIZAK, INFO, DOBRO)
 
 PORT = 8777
-VERZIJA = "1.7.1"
+VERZIJA = "1.7.2"
 
 
 def korijen():
@@ -80,6 +80,7 @@ app = Flask(__name__, template_folder=resurs("sabloni"),
 POSAO = {"radi": False, "dnevnik": [], "nalazi": [], "sirovo": {},
          "gotovo": False, "folder": None, "pdf": None, "sazetak": None,
          "greske": [], "treba_izvjestaj": False, "trajanje": {},
+         "prekid": False, "prekinut": False,
          "korak": "", "napredak": 0, "podaci": {}}
 BRAVA = threading.Lock()
 
@@ -169,6 +170,7 @@ def pokreni(podaci):
     POSAO.update({"radi": True, "dnevnik": [], "nalazi": [], "sirovo": {},
                   "gotovo": False, "pdf": None, "sazetak": None,
                   "greske": [], "treba_izvjestaj": False, "trajanje": {},
+                  "prekid": False, "prekinut": False,
                   "napredak": 0, "podaci": podaci})
 
     podaci.setdefault("masina", socket.gethostname())
@@ -199,6 +201,10 @@ def pokreni(podaci):
         """Pokreni jednu provjeru. Pad jedne provjere ne smije oboriti pregled —
         inače se ne dođe ni do PDF-a, a to je jedino zbog čega se alat pokreće."""
         if kljuc not in izabrani:
+            return
+        if POSAO["prekid"]:
+            POSAO["prekinut"] = True
+            napreduj(naziv)
             return
         if not uslov:
             log(f"── {naziv} — preskočeno, nema potrebnog podatka ──")
@@ -269,7 +275,8 @@ def pokreni(podaci):
 
         def _mreza():
             r = m_mreza.provjeri(podaci["opseg"], log,
-                                 preskoci=podaci.get("preskoci"))
+                                 preskoci=podaci.get("preskoci"),
+                                 stani=lambda: POSAO["prekid"])
             try:
                 j = m_mreza.javna_izlozenost(log)
                 r["nalazi"] += j["nalazi"]
@@ -363,6 +370,18 @@ def pokreni(podaci):
             log(f"Sažetak nije napravljen — {poruka}")
             POSAO["greske"].append(f"Sažetak: {poruka}")
 
+        if POSAO["prekinut"] or POSAO["prekid"]:
+            log("── Pregled je prekinut na zahtjev ──")
+            log("   Izvještaj se pravi od onoga što je do sada urađeno.")
+            m_zapisi.upisi(folder, "prekid", tehnicar,
+                           {"nalaza": len(POSAO["nalazi"])}, lok)
+            POSAO["nalazi"].append(nalaz(
+                "Napomene", "Pregled je prekinut prije kraja", INFO,
+                "Pregled je zaustavljen na zahtjev tehničara, pa nisu izvršene "
+                "sve izabrane provjere.",
+                preporuka="Ponoviti pregled u punom obimu prije nego se "
+                          "izvještaj preda klijentu."))
+
         po_duzini = sorted(POSAO["trajanje"].items(), key=lambda x: -x[1])
         ukupno = sum(POSAO["trajanje"].values())
         if po_duzini:
@@ -440,6 +459,8 @@ def api_stanje():
         "pdf": POSAO["pdf"], "sazetak": POSAO.get("sazetak"),
         "greske": POSAO.get("greske") or [],
         "treba_izvjestaj": bool(POSAO.get("treba_izvjestaj")),
+        "prekid": bool(POSAO.get("prekid")),
+        "prekinut": bool(POSAO.get("prekinut")),
         "folder": os.path.basename(POSAO["folder"]) if POSAO["folder"] else None,
     })
 
@@ -560,6 +581,18 @@ def api_vrste():
     return jsonify({"vrste": m_rucni_unos.VRSTE,
                     "stanja": [{"kljuc": k, "opis": v[0]}
                                for k, v in m_rucni_unos.STANJA.items()]})
+
+
+@app.route("/api/prekini", methods=["POST"])
+def api_prekini():
+    """Zaustavi pregled. Provjera koja je u toku se dovrši, ostale se preskaču —
+    izvještaj se pravi od onoga što je do tada urađeno."""
+    if not POSAO["radi"]:
+        return jsonify({"ok": False, "greska": "Pregled nije u toku."}), 400
+    POSAO["prekid"] = True
+    POSAO["korak"] = "Prekidam…"
+    log("Zatražen prekid pregleda — čekam da se tekuća provjera završi")
+    return jsonify({"ok": True})
 
 
 @app.route("/api/verzija")
