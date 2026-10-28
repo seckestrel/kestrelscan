@@ -268,7 +268,8 @@ def pokreni(podaci):
                bool(podaci.get("adrese")))
 
         def _mreza():
-            r = m_mreza.provjeri(podaci["opseg"], log)
+            r = m_mreza.provjeri(podaci["opseg"], log,
+                                 preskoci=podaci.get("preskoci"))
             try:
                 j = m_mreza.javna_izlozenost(log)
                 r["nalazi"] += j["nalazi"]
@@ -720,7 +721,23 @@ def otvori_folder():
     return jsonify({"ok": True})
 
 
+def slobodan_port(pocetni=PORT, pokusaja=20):
+    """Ako je 8777 zauzet — drugi alat, ranije pokrenuta kopija — uzmi sljedeći
+    slobodan umjesto da pucaš sa greškom koju niko ne zna pročitati."""
+    for p in range(pocetni, pocetni + pokusaja):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind(("127.0.0.1", p))
+                return p
+            except OSError:
+                continue
+    return pocetni
+
+
 def main():
+    global PORT
+    PORT = slobodan_port()
     url = f"http://127.0.0.1:{PORT}/"
     print(f"\n  KestrelScan {VERZIJA} radi na {url}\n  Zatvori ovaj prozor da prekineš.\n")
     threading.Timer(1.2, lambda: webbrowser.open(url)).start()

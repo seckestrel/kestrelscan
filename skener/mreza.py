@@ -179,9 +179,10 @@ def razdvoji(tekst):
     return mreze, lose
 
 
-def provjeri(opseg, log=lambda s: None, max_hostova=512):
+def provjeri(opseg, log=lambda s: None, max_hostova=512, preskoci=None):
     nalazi = []
     mreze, lose = razdvoji(opseg)
+    izuzete, lose_izuzete = razdvoji(preskoci or "")
 
     if not mreze:
         return {"nalazi": [nalaz(
@@ -245,6 +246,25 @@ def provjeri(opseg, log=lambda s: None, max_hostova=512):
             if h not in vidjeno:
                 vidjeno.add(h)
                 hostovi.append(h)
+    # --- adrese koje se namjerno preskaču ---
+    # Medicinski i industrijski uređaji znaju da se zaglave na skeniranje
+    # portova. Ako klijent kaže da ih ima, njihove adrese se zaobilaze.
+    if izuzete:
+        prije = len(hostovi)
+        hostovi = [h for h in hostovi
+                   if not any(h in m for m in izuzete)]
+        preskoceno = prije - len(hostovi)
+        log(f"Preskačem {preskoceno} adresa na zahtjev: "
+            + ", ".join(str(m) for m in izuzete))
+        nalazi.append(nalaz(
+            "Mreža", f"{preskoceno} adresa je namjerno preskočeno", INFO,
+            "Na zahtjev nisu skenirane: " + ", ".join(str(m) for m in izuzete)
+            + ". Uobičajen razlog su medicinski ili industrijski uređaji koji "
+            "ne podnose skeniranje portova.",
+            preporuka="Te uređaje popisati ručno i stanje utvrditi kroz "
+                      "dokumentaciju proizvođača, ne skeniranjem.",
+            dokaz=[f"preskočeno: {m}" for m in izuzete]))
+
     ukupno = len(hostovi)
     hostovi = hostovi[:max_hostova]
     if ukupno > max_hostova:

@@ -130,6 +130,24 @@ riješeno, šta je novo i šta i dalje stoji.
 
 To je ono što mjesečni izvještaj pretvara iz slike stanja u dokaz da si radio.
 
+### Uređaji koji ne podnose skeniranje
+
+Medicinski i industrijski uređaji — analizatori, ultrazvuci, mašine u
+proizvodnji, stariji PLC-ovi — znaju da se zaglave ili restartuju na obično
+skeniranje portova. To nije teorija nego poznata pojava kod opreme koja ima
+jednostavan mrežni sloj.
+
+Prije pregleda pitaj klijenta ima li takvih uređaja i upiši njihove adrese u
+polje **Ne skeniraj ove adrese**. Prima pojedinačne adrese i opsege, odvojene
+zarezom:
+
+```
+192.168.1.50, 192.168.1.64/28
+```
+
+Te adrese se zaobilaze, a u izvještaj ide nalaz da su namjerno preskočene i
+koliko ih je — da se zna da nisu zaboravljene. Takvu opremu popiši ručno.
+
 ### VPN i tuđe mreže — granica koju ne prelaziš
 
 Firma često ima VPN prema nečijem centralnom sistemu: zdravstvenom

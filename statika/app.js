@@ -64,6 +64,7 @@ $("#btn-start").addEventListener("click", async () => {
     dkim_selektor: $("#dkim_selektor").value.trim(),
     adrese:   $("#adrese").value.trim(),
     opseg:    $("#opseg").value.trim(),
+    preskoci: $("#preskoci").value.trim(),
     domen_ad: $("#domen_ad").value.trim(),
     izvrsio:  $("#izvrsio").value.trim(),
     kontakt_osoba: $("#kontakt_osoba").value.trim(),
