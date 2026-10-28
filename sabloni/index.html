@@ -130,7 +130,7 @@
     <div class="grupa-provjera">
       <div class="zag-grupe">
         <b>Na mreži klijenta</b>
-        <span>pokreće se sa lokacije</span>
+        <span>jedno pokretanje pokrije sve uređaje na mreži</span>
       </div>
       <label class="ček"><input type="checkbox" value="mreza" checked>
         <span><b>Mreža i otvoreni servisi</b><em>Popis uređaja, portovi, nesigurni protokoli — bez Nmapa</em></span></label>
@@ -157,7 +157,8 @@
     <div class="grupa-provjera">
       <div class="zag-grupe">
         <b>Na mašini klijenta</b>
-        <span>pokreće se sa USB-a, na računaru u domenu</span>
+        <span>vidi samo ovaj računar — za ostale pokreni alat na svakom, pa ih
+          spoji zbirnim izvještajem</span>
       </div>
       <label class="ček"><input type="checkbox" value="windows" {% if je_windows %}checked{% endif %}
         {% if not je_windows %}disabled{% endif %}>

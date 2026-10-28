@@ -107,6 +107,49 @@ riješeno, šta je novo i šta i dalje stoji.
 
 To je ono što mjesečni izvještaj pretvara iz slike stanja u dokaz da si radio.
 
+### Šta vidi jedna mašina, a šta cijela firma
+
+Pitanje koje se prvo postavi na terenu: ako pokrenem alat na jednom računaru,
+hoće li on pregledati i ostale? Odgovor zavisi od provjere, i dijeli se na tri
+grupe.
+
+**1. Cijela firma iz jednog pokretanja** — ove ne zavise od toga na kojoj si
+mašini:
+
+| Provjera | Šta pokrije |
+|---|---|
+| Mail domena, Sertifikat i TLS, CMS | domen i sajt firme |
+| Procurjeli nalozi | sve adrese koje upišeš |
+| Pasivni uvid, Izloženost sa interneta | javna adresa firme |
+| Mreža i otvoreni servisi | **sve uređaje na mreži** — IP, MAC, proizvođač, otvoreni portovi |
+| Active Directory | cijeli domen |
+
+**2. Samo mašina na kojoj je alat pokrenut** — ovo se najčešće promaši:
+
+BitLocker, firewall, antivirus, zakrpe, administratorski nalozi, instalirani
+softver, lozinke u pregledaču, backup, popis hardvera, spremnost za Windows 11,
+licence i aktivacija, bežične mreže.
+
+Ako na toj jednoj mašini BitLocker radi, **to ne znači da radi i na ostalima**.
+Izvještaj iz jednog pokretanja opisuje jednu mašinu, ne firmu.
+
+**3. Inventar uređaja — jedina koja zaviri u druge mašine.** Otvara CIM sesiju
+preko DCOM-a prema svakoj mašini sa mreže i čita model, serijski broj,
+procesor, memoriju, disk i verziju sistema. Treba joj administratorski nalog
+koji se upisuje u polja na vrhu.
+
+Ali čita **samo popis opreme** — ne i postavke sigurnosti. BitLocker, firewall
+i softver se preko nje ne vide.
+
+**Iz toga slijedi:**
+
+- Za **ponudu i prvi pregled** dovoljno je jedno pokretanje sa jedne mašine, uz
+  uključen Inventar uređaja. Dobiješ popis mreže, popis opreme sa svih mašina,
+  sve spoljne provjere i jednu mašinu detaljno — dovoljno da se vlasniku pokaže
+  stanje.
+- Za **pregled koji se naplaćuje po uređaju** moraš proći mašine, pa spojiti
+  preglede kroz zbirni izvještaj. Postupak je opisan ispod.
+
 ### Postupak za firmu sa više računara
 
 Primjer: petnaest računara kod jednog klijenta.
