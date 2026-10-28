@@ -47,7 +47,7 @@ from skener.nalaz import (nalaz, ocjena, sortiraj,
                           VISOK, SREDNJI, NIZAK, INFO, DOBRO)
 
 PORT = 8777
-VERZIJA = "1.7.6"
+VERZIJA = "1.7.7"
 
 
 def korijen():
@@ -80,7 +80,7 @@ app = Flask(__name__, template_folder=resurs("sabloni"),
 POSAO = {"radi": False, "dnevnik": [], "nalazi": [], "sirovo": {},
          "gotovo": False, "folder": None, "pdf": None, "sazetak": None,
          "greske": [], "treba_izvjestaj": False, "trajanje": {},
-         "prekid": False, "prekinut": False,
+         "prekid": False, "prekinut": False, "poredjenje": None,
          "korak": "", "napredak": 0, "podaci": {}}
 BRAVA = threading.Lock()
 
@@ -170,7 +170,7 @@ def pokreni(podaci):
     POSAO.update({"radi": True, "dnevnik": [], "nalazi": [], "sirovo": {},
                   "gotovo": False, "pdf": None, "sazetak": None,
                   "greske": [], "treba_izvjestaj": False, "trajanje": {},
-                  "prekid": False, "prekinut": False,
+                  "prekid": False, "prekinut": False, "poredjenje": None,
                   "napredak": 0, "podaci": podaci})
 
     podaci.setdefault("masina", socket.gethostname())
@@ -342,6 +342,7 @@ def pokreni(podaci):
             if prethodni:
                 log("Poredim sa prošlim pregledom")
                 podaci["poredjenje"] = m_poredjenje.uporedi(POSAO["nalazi"], prethodni)
+                POSAO["poredjenje"] = podaci["poredjenje"]
                 b = podaci["poredjenje"]["broj"]
                 log(f'Riješeno {b["rijeseno"]}, novih {b["novo"]}, '
                     f'i dalje otvoreno {b["ostalo"]}')
@@ -463,6 +464,7 @@ def api_stanje():
         "prekid": bool(POSAO.get("prekid")),
         "prekinut": bool(POSAO.get("prekinut")),
         "folder": os.path.basename(POSAO["folder"]) if POSAO["folder"] else None,
+        "poredjenje": POSAO.get("poredjenje"),
     })
 
 

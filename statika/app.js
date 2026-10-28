@@ -147,6 +147,46 @@ async function osvjezi() {
 }
 
 /* ---------- rezultat ---------- */
+/* Poređenje sa prošlim pregledom iste firme. Do sada je stajalo samo u
+   PDF-u, pa se na terenu nije vidjelo bez otvaranja izvještaja. */
+function prikaziPoredjenje(s) {
+  const el = $("#poredjenje"), p = s.poredjenje;
+  if (!p) { el.classList.add("sakrij"); el.innerHTML = ""; return; }
+
+  const b = p.broj;
+  const prije = (p.ocjena_prethodna || {}).bodovi;
+  const sada = s.ocjena.bodovi;
+  let kretanje = "";
+  if (Number.isInteger(prije) && Number.isInteger(sada)) {
+    const r = sada - prije;
+    const znak = r > 0 ? "bolje" : (r < 0 ? "lošije" : "isto");
+    kretanje = `<b class="kret ${r > 0 ? "gore" : (r < 0 ? "dolje" : "")}">`
+      + `${prije} → ${sada}</b> <span class="nag">(${znak})</span>`;
+  }
+
+  const spisak = (naslov, lista, klasa) => !lista.length ? "" : `
+    <details class="por-grupa ${klasa}">
+      <summary>${naslov} <b>${lista.length}</b></summary>
+      <ul>${lista.map(n => `<li>${esc(n.naslov)}
+        <span class="nag">${esc(n.oblast)}</span></li>`).join("")}</ul>
+    </details>`;
+
+  el.classList.remove("sakrij");
+  el.innerHTML = `
+    <div class="por-vrh">
+      <span><b>Od prošlog pregleda</b>
+        <span class="nag">${esc(p.datum_prethodnog || "ranije")}</span></span>
+      ${kretanje}
+    </div>
+    <div class="por-grupe">
+      ${spisak("Riješeno", p.rijeseno, "dobro")}
+      ${spisak("Novo", p.novo, "lose")}
+      ${spisak("I dalje otvoreno", p.ostalo, "isto")}
+    </div>
+    <div class="nag">Riješeno ${b.rijeseno} · novih ${b.novo} · otvoreno ${b.ostalo}.
+      Isti pregled stoji i u PDF-u.</div>`;
+}
+
 function prikaziRezultat(s) {
   $("#rezultat").classList.remove("sakrij");
   $("#prazno").classList.add("sakrij");
@@ -166,6 +206,7 @@ function prikaziRezultat(s) {
   $("#nivo").textContent = s.ocjena.nivo;
   $("#nivo-opis").textContent = s.ocjena.opis;
   $(".bodovi small").style.display = mj ? "" : "none";
+  prikaziPoredjenje(s);
 
   // dnevnik se skupi kad pregled završi — rezultat je sad bitniji
   $("#dnevnik").classList.add("skupljen");
