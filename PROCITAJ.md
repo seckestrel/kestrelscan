@@ -22,16 +22,30 @@ alat radi. Zatvoriš prozor — alat se gasi.
 
 ### Verzija bez Pythona
 
-Dvoklik na `NAPRAVI_EXE.bat` napravi `dist\KestrelScan.exe` — jedan fajl koji radi
-na svakom Windowsu, bez Pythona. Na USB kopiraš:
+**Na mašini klijenta Pythona po pravilu nema**, i nema ga šta ni instalirati.
+Zato se jednom, na svom računaru, napravi `.exe` koji nosi Python u sebi.
+
+Jednom, na svom računaru:
+
+1. Instaliraj Python sa [python.org/downloads](https://www.python.org/downloads/)
+   — na prvom ekranu **obavezno čekiraj „Add python.exe to PATH"**.
+2. Dvoklik na `NAPRAVI_EXE.bat`. Traje dvije do tri minute i treba mu internet.
+3. Gotov `dist\KestrelScan.exe` kopiraj na USB.
+
+Na USB ide:
 
 ```
 USB:\
   KestrelScan.exe
-  tools\PingCastle.exe
+  postavke.json         <- ključevi i potpis
+  tools\PingCastle.exe   <- ako ga koristiš
 ```
 
-Folderi `rezultati\` i `postavke.json` se naprave sami pored exe fajla.
+Folder `rezultati\` se pravi sam, pored exe fajla.
+
+`POKRENI.bat` i `NAPRAVI_EXE.bat` sami traže Python: prvo preko pokretača `py`,
+pa `python`, pa po uobičajenim putanjama instalacije. Prazna ljuska iz Microsoft
+Store-a se prepoznaje i preskače. Ako ga stvarno nema, ispišu šta da se uradi.
 
 ---
 
