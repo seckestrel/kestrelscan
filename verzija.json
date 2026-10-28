@@ -1,9 +1,8 @@
 {
-  "verzija": "1.7.2",
+  "verzija": "1.7.3",
   "datum": "28.10.2026.",
   "promjene": [
-    "Dugme Prekini pregled — zaustavlja skeniranje i pravi izvještaj od urađenog",
-    "Provjera ažuriranja sad javi grešku umjesto da ćuti"
+    "Jasnije polje za adresu ažuriranja — sivi primjer se više ne može zamijeniti sa upisanom vrijednošću"
   ],
   "zip": "https://raw.githubusercontent.com/seckestrel/kestrelscan/main/preuzmi/KestrelScan.zip"
 }

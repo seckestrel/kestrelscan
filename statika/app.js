@@ -364,6 +364,8 @@ $("#btn-postavke").addEventListener("click", async () => {
     ? "ključ je snimljen — ostavi prazno da ostane isti"
     : "nije unesen";
   $("#p-azur-url").value = p.azuriranje_url || "";
+  $("#p-azur-url").placeholder = p.azuriranje_url
+    ? "" : "npr. korisnik/repozitorij — nije upisano";
   $("#p-azur-auto").checked = p.azuriranje_automatski !== false;
   $("#p-shodan").placeholder = p.ima_shodan
     ? "ključ je snimljen — ostavi prazno da ostane isti"
@@ -513,6 +515,14 @@ async function provjeriVerziju(rucno) {
         `<small>Alat ne može da dođe do svog servera: ${esc(String(e))}</small>`,
         true);
     }
+    return;
+  }
+
+  if (rucno && v.greska && /[Nn]ije podešena/.test(v.greska)) {
+    obavijesti("Adresa za ažuriranje nije upisana.",
+      "<small>Otvori <b>Postavke</b>, u polje <b>Ažuriranje</b> otkucaj "
+      + "<b>korisnik/repozitorij</b> i pritisni Snimi. Sivi tekst u polju je "
+      + "samo primjer, ne upisana vrijednost.</small>", true);
     return;
   }
 
