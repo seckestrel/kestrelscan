@@ -21,6 +21,14 @@
 </header>
 
 <div id="pojas-verzija" class="pojas-verzija sakrij"></div>
+{% if not je_admin %}
+<div class="pojas-admin">
+  <b>Alat nije pokrenut kao administrator.</b>
+  Provjere koje traže administratorska prava — BitLocker, evidencija prijava,
+  dio SMB postavki — vratiće prazno ili grešku, a pregled će izgledati uredno.
+  Zatvori alat, desni klik na njega i <b>Pokreni kao administrator</b>.
+</div>
+{% endif %}
 
 <main>
   <!-- ========== LIJEVO ========== -->

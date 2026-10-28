@@ -391,3 +391,11 @@ select{
 .pojas-verzija .glavno{width:auto; margin-top:0; padding:9px 16px; font-size:14px}
 .dno a{color:var(--prigusen); text-decoration:underline}
 .dno a:hover{color:var(--cyan)}
+
+/* ---- upozorenje: alat nije pokrenut kao administrator ---- */
+.pojas-admin{
+  margin:0 22px; padding:13px 16px; border-radius:0 0 10px 10px;
+  font-size:13.5px; background:#2a2314; border:1px solid #5a4a22;
+  border-top:none; color:#f0e4c2;
+}
+.pojas-admin b{color:var(--srednji)}

@@ -130,6 +130,13 @@ riješeno, šta je novo i šta i dalje stoji.
 
 To je ono što mjesečni izvještaj pretvara iz slike stanja u dokaz da si radio.
 
+### Pokreni kao administrator
+
+Na Windowsu desni klik na alat i **Pokreni kao administrator**. Bez toga
+BitLocker, evidencija prijava i dio SMB postavki vrate prazno ili grešku — a
+pregled izgleda uredno, što je gore nego da je pukao. Alat sam provjeri prava
+i ispiše žutu traku ako nisu dovoljna.
+
 ### Šta vidi jedna mašina, a šta cijela firma
 
 Pitanje koje se prvo postavi na terenu: ako pokrenem alat na jednom računaru,

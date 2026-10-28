@@ -117,6 +117,18 @@ def snimi_postavke(p):
         json.dump(p, f, ensure_ascii=False, indent=2)
 
 
+def je_administrator():
+    """Bez administratorskih prava BitLocker, sigurnosni dnevnik i dio SMB
+    postavki vrate prazno — a pregled izgleda uredno. Zato se pita unaprijed."""
+    if not sys.platform.startswith("win"):
+        return True
+    try:
+        import ctypes
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return True
+
+
 def trajanje(sekundi):
     """Vrijeme u obliku koji se čita bez računanja."""
     s = int(round(sekundi))
@@ -382,6 +394,7 @@ def pocetna():
                            ima_kljuc=bool(ucitaj_postavke().get("hibp_kljuc")),
                            ima_shodan=bool(ucitaj_postavke().get("shodan_kljuc")),
                            je_windows=m_windows.JE_WINDOWS,
+                           je_admin=je_administrator(),
                            ima_pingcastle=bool(m_pingcastle.putanja_exe(KORIJEN)),
                            pitanja=m_rucno.po_oblastima())
 
