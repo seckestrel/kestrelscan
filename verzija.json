@@ -1,0 +1,14 @@
+{
+  "verzija": "1.7.0",
+  "datum": "28.10.2026.",
+  "promjene": [
+    "Polje za adrese koje se ne smiju skenirati (medicinski uređaji)",
+    "Upozorenje na VPN tunel i na opseg koji nije mreža te mašine",
+    "Nalaz za uređaje iz ARP tabele koji ne odgovaraju na skeniranje",
+    "Mjerenje vremena po provjeri",
+    "Upozorenje kad alat nije pokrenut kao administrator",
+    "Exe nosi KestrelSec ikonu i podatke o izdavaču",
+    "Ako je port 8777 zauzet, alat uzme sljedeći slobodan"
+  ],
+  "zip": "https://raw.githubusercontent.com/seckestrel/kestrelscan/main/preuzmi/KestrelScan.zip"
+}

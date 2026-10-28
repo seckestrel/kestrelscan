@@ -18,6 +18,7 @@ import io
 import os
 import re
 import shutil
+import sys
 import zipfile
 
 import requests
@@ -89,6 +90,16 @@ def _bezbjedni_clanovi(z):
 
 def ugradi(zip_url, korijen, log=lambda s: None, timeout=120):
     """Preuzmi zip i raspakuj ga preko alata. Vrati (ok, poruka)."""
+    if getattr(sys, "frozen", False):
+        # .exe nosi cijeli program u sebi i ne može sam sebe zamijeniti dok
+        # radi. Raspakivanje .py fajlova pored njega ne bi promijenilo ništa,
+        # pa je poštenije reći šta treba uraditi.
+        return False, (
+            "Ovo je .exe verzija i ona se ne može sama ažurirati — program je "
+            "zapakovan u jedan fajl. Ažuriraj izvornu verziju na svom računaru "
+            "(tamo ovo dugme radi), pa pokreni NAPRAVI_EXE.bat i novi "
+            "KestrelScan.exe prekopiraj na USB.")
+
     if not (zip_url or "").strip():
         return False, "U verzija.json ne stoji adresa zip fajla."
 

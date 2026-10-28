@@ -18,9 +18,7 @@ build/
 dist/
 *.spec
 
-# paket i opis verzije se ne čuvaju u repozitoriju — repozitorij je izvorni kod
-preuzmi/
-verzija.json
+# radni folder objave
 izdanje/
 
 # opis exe fajla se pravi pri svakom build-u

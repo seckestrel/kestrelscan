@@ -47,7 +47,7 @@ from skener.nalaz import (nalaz, ocjena, sortiraj,
                           VISOK, SREDNJI, NIZAK, INFO, DOBRO)
 
 PORT = 8777
-VERZIJA = "1.6.0"
+VERZIJA = "1.7.0"
 
 
 def korijen():
