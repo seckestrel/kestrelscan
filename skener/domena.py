@@ -64,7 +64,14 @@ def _selektori_za(mx, rucni=None):
         if s and s not in red:
             red.append(s)
 
-    spojeni_mx = " ".join(mx or []).lower()
+    # _mx vraća parove (prioritet, server) — uzmi iz njih samo tekst
+    dijelovi = []
+    for stavka in (mx or []):
+        if isinstance(stavka, (tuple, list)):
+            dijelovi += [str(x) for x in stavka]
+        else:
+            dijelovi.append(str(stavka))
+    spojeni_mx = " ".join(dijelovi).lower()
     for kljuc, lista in PO_PROVAJDERU.items():
         if kljuc in spojeni_mx:
             for s in lista:
